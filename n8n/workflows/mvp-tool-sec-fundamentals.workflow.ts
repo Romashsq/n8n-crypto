@@ -52,8 +52,11 @@ const C = {
   operating_cash_flow: { kind: 'money', type: 'flow', us: ['NetCashProvidedByUsedInOperatingActivities', 'NetCashProvidedByUsedInOperatingActivitiesContinuingOperations'], ifrs: ['CashFlowsFromUsedInOperatingActivities'] },
   capex: { kind: 'money', type: 'flow', us: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets'], ifrs: ['PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'PurchaseOfPropertyPlantAndEquipment'] },
   cash: { kind: 'money', type: 'instant', us: ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents', 'Cash'], ifrs: ['CashAndCashEquivalents'] },
-  short_term_investments: { kind: 'money', type: 'instant', us: ['MarketableSecuritiesCurrent', 'ShortTermInvestments', 'AvailableForSaleSecuritiesDebtSecuritiesCurrent'], ifrs: ['CurrentInvestments'] },
+  short_term_investments: { kind: 'money', type: 'instant', us: ['MarketableSecuritiesCurrent', 'ShortTermInvestments', 'DebtSecuritiesCurrent', 'AvailableForSaleSecuritiesDebtSecuritiesCurrent'], ifrs: ['CurrentInvestments'] },
   long_term_debt: { kind: 'money', type: 'instant', us: ['LongTermDebt', 'LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermNotesPayable'], ifrs: ['NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings'] },
+  lt_marketable_securities: { kind: 'money', type: 'instant', us: ['MarketableSecuritiesNoncurrent', 'AvailableForSaleSecuritiesDebtSecuritiesNoncurrent'], ifrs: ['NoncurrentInvestments'] },
+  ltd_current: { kind: 'money', type: 'instant', us: ['LongTermDebtCurrent'], ifrs: ['CurrentPortionOfNoncurrentBorrowings'] },
+  short_term_debt: { kind: 'money', type: 'instant', us: ['CommercialPaper', 'ShortTermBorrowings'], ifrs: ['ShorttermBorrowings'] },
   equity: { kind: 'money', type: 'instant', us: ['StockholdersEquity', 'StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest'], ifrs: ['EquityAttributableToOwnersOfParent', 'Equity'] },
   shares_diluted: { kind: 'shares', type: 'flow', us: ['WeightedAverageNumberOfDilutedSharesOutstanding'], ifrs: ['AdjustedWeightedAverageShares'] },
   rnd: { kind: 'money', type: 'flow', us: ['ResearchAndDevelopmentExpense', 'ResearchAndDevelopmentExpenseExcludingAcquiredInProcessCost'], ifrs: ['ResearchAndDevelopmentExpense'] },
@@ -136,7 +139,7 @@ let fyEnd0 = null;
 if (facts) {
   const A = {};
   const Q = {};
-  const allFields = FIELDS.concat(['cost_of_revenue']);
+  const allFields = FIELDS.concat(['cost_of_revenue', 'lt_marketable_securities', 'ltd_current', 'short_term_debt']);
   allFields.forEach(function (f) { A[f] = collect(f, isAnnual); Q[f] = collect(f, isQuarter); });
 
   const fyByEnd = {};
@@ -192,6 +195,23 @@ if (facts) {
   };
 
   const rawRows = ends.map(function (end) { return { end: end, row: buildRow(A, end) }; });
+  const shRaw = rawRows.map(function (r) { return r.row.shares_diluted; });
+  let cum = 1;
+  for (let i = 1; i < rawRows.length; i++) {
+    const newer = shRaw[i - 1];
+    const older = shRaw[i];
+    if (num(newer) !== null && num(older) !== null && older > 0) {
+      const ratio = newer / older;
+      let f = 1;
+      if (ratio > 1.8 && Math.abs(ratio - Math.round(ratio)) / Math.round(ratio) < 0.15) f = Math.round(ratio);
+      else if (ratio < 0.55 && Math.abs(1 / ratio - Math.round(1 / ratio)) / Math.round(1 / ratio) < 0.15) f = 1 / Math.round(1 / ratio);
+      if (f !== 1) { cum = cum * f; notes.push('Share count and EPS for fiscal years ending on or before ' + rawRows[i].end + ' were adjusted for an apparent ' + (f > 1 ? f + '-for-1 split' : '1-for-' + Math.round(1 / f) + ' reverse split') + ' not restated in the filings.'); }
+    }
+    if (cum !== 1) {
+      if (num(rawRows[i].row.shares_diluted) !== null) rawRows[i].row.shares_diluted = rawRows[i].row.shares_diluted * cum;
+      if (num(rawRows[i].row.eps_diluted) !== null) rawRows[i].row.eps_diluted = rawRows[i].row.eps_diluted / cum;
+    }
+  }
   annual = rawRows.slice(0, 5).reverse().map(function (r) {
     const o = { fiscal_year: fyLabel(r.end), period_end: r.end };
     return Object.assign(o, fmtRow(r.row));
@@ -247,9 +267,18 @@ if (facts) {
     const shAt = function (i) { return rawRows[i] ? rawRows[i].row.shares_diluted : null; };
     const bal = latestQuarter && lqEnd > fyEnd0 ? Q : A;
     const balEnd = latestQuarter && lqEnd > fyEnd0 ? lqEnd : fyEnd0;
-    const cashV = bal.cash[balEnd] ? bal.cash[balEnd].val : null;
-    const stiV = bal.short_term_investments[balEnd] ? bal.short_term_investments[balEnd].val : 0;
-    const debtV = bal.long_term_debt[balEnd] ? bal.long_term_debt[balEnd].val : null;
+    const at = function (f) { return bal[f][balEnd] ? bal[f][balEnd].val : null; };
+    const cashV = at('cash');
+    const parts = ['cash'];
+    let liquid = cashV;
+    ['short_term_investments', 'lt_marketable_securities'].forEach(function (f) { if (liquid !== null && at(f) !== null) { liquid += at(f); parts.push(f); } });
+    let debtV = at('long_term_debt');
+    const dparts = [];
+    if (debtV !== null) {
+      dparts.push(bal.long_term_debt[balEnd].concept);
+      if (bal.long_term_debt[balEnd].concept !== 'LongTermDebt' && at('ltd_current') !== null) { debtV += at('ltd_current'); dparts.push('LongTermDebtCurrent'); }
+      if (at('short_term_debt') !== null) { debtV += at('short_term_debt'); dparts.push(bal.short_term_debt[balEnd].concept); }
+    }
     derived = {
       latest_fiscal_year: fyLabel(fyEnd0),
       revenue_growth_latest_fy_pct: revAt(1) ? r2((revAt(0) / revAt(1) - 1) * 100) : null,
@@ -262,9 +291,11 @@ if (facts) {
       fcf_to_net_income: fy0.net_income && fy0.free_cash_flow !== null ? r2(fy0.free_cash_flow / fy0.net_income) : null,
       sbc_pct_revenue: pct(fy0.sbc, fy0.revenue),
       rnd_pct_revenue: pct(fy0.rnd, fy0.revenue),
-      net_cash: cashV !== null && debtV !== null ? mil(cashV + stiV - debtV) : null,
+      cash_and_investments: mil(liquid),
+      total_debt: mil(debtV),
+      net_cash: liquid !== null && debtV !== null ? mil(liquid - debtV) : null,
       net_cash_as_of: balEnd,
-      net_cash_formula: 'cash' + (bal.short_term_investments[balEnd] ? ' + short_term_investments' : '') + ' - long_term_debt',
+      net_cash_formula: parts.join(' + ') + ' - (' + (dparts.join(' + ') || 'no debt tag') + ')',
       diluted_shares_cagr_3y_pct: cagr(shAt(0), shAt(3), 3)
     };
     if (debtV === null) notes.push('No long-term debt tag found at ' + balEnd + ' (company may carry no long-term debt); net_cash is null.');
