@@ -1,0 +1,457 @@
+<title>Aura Invest AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Claude-style app shell. Fixed sidebar (brand, New Chat, three agent workspaces, profile) + conversation pane with agent dots above the composer. Single deliberate dark look. */
+:root {
+  color-scheme: dark;
+  --bg: #121214;          /* matte charcoal app ground */
+  --panel: #18181c;       /* sidebar */
+  --surface: #1e1e24;     /* inputs, cards */
+  --raised: #26262e;      /* hover, active row */
+  --line: #2b2b33;
+  --text: #f4f4f6;
+  --muted: #9ca3af;
+  --faint: #6b7280;
+  --ruby: #9b111e;        /* owner's accent */
+  --ruby-hi: #b5172a;
+  --ruby-text: #f0707f;
+  --ruby-tint: rgba(155, 17, 30, 0.16);
+  --up: #3dbe8b;
+  --down: #ef5a52;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ruby-hi); outline-offset: 2px; border-radius: 6px; }
+svg { flex: none; }
+
+.app { display: grid; grid-template-columns: 284px minmax(0, 1fr); height: 100%; }
+
+/* ---------- Sidebar ---------- */
+.side { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; padding: 14px 12px; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
+.newchat { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); text-align: left; font-weight: 500; }
+.newchat:hover { background: var(--raised); }
+.navrow { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); text-align: left; }
+.navrow:hover { background: var(--raised); color: var(--text); }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); padding: 14px 8px 4px; }
+.groups { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding-right: 2px; }
+.group { border-radius: 10px; }
+.ghead { display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 8px; border-radius: 8px; }
+.ghead:hover { background: var(--raised); }
+.gtoggle { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; font-weight: 600; }
+.gtoggle .chev { transition: transform 0.15s ease; color: var(--muted); }
+.group.closed .chev { transform: rotate(-90deg); }
+.gplus { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.gplus:hover { color: var(--text); background: var(--raised); }
+.group.active .ghead .gname { color: var(--text); }
+.chats { list-style: none; margin: 2px 0 6px; padding: 0 0 0 22px; display: flex; flex-direction: column; gap: 1px; }
+.group.closed .chats { display: none; }
+.chat { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border-radius: 7px; border: 0; background: none; color: var(--muted); text-align: left; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat:hover { background: var(--raised); color: var(--text); }
+.chat.current { background: var(--raised); color: var(--text); }
+.chat.pinned { background: #22222a; color: var(--text); box-shadow: inset 2px 0 0 var(--ruby); border-radius: 0 7px 7px 0; }
+.chat .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pinned .pin { color: var(--ruby-text); }
+
+.profile { margin-top: auto; border-top: 1px solid var(--line); padding: 12px 6px 2px; display: flex; align-items: center; gap: 10px; position: relative; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid var(--ruby); font-weight: 600; font-size: 13px; }
+.who { flex: 1; min-width: 0; line-height: 1.25; }
+.who b { display: block; font-weight: 600; }
+.who span { color: var(--muted); font-size: 12px; }
+.iconbtn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; color: var(--muted); }
+.iconbtn:hover { background: var(--raised); color: var(--text); }
+.menu { position: absolute; bottom: 52px; right: 0; width: 248px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 10px 28px rgba(0,0,0,0.45); z-index: 5; }
+.menu h4 { margin: 6px 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 500; }
+.mrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.ok { background: var(--up); } .wait { background: #d9a441; }
+.mbtn { width: 100%; text-align: left; border: 0; background: none; padding: 7px 8px; border-radius: 6px; color: var(--text); font-size: 13px; }
+.mbtn:hover { background: var(--raised); }
+
+/* ---------- Main ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.topbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); min-height: 52px; }
+.menu-toggle { display: none; }
+.crumb { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.crumb b { color: var(--text); font-weight: 500; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--up); }
+.badge.building i { background: #d9a441; }
+
+.thread { flex: 1; overflow-y: auto; min-height: 0; padding: 28px 20px 12px; }
+.col { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.intro { text-align: center; padding: 18px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.intro h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 56ch; text-wrap: pretty; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; margin-top: 10px; text-align: left; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.fact h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); font-weight: 500; }
+.fact p { margin: 0; color: var(--text); font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+.chipq { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 12px; font-size: 13px; }
+.chipq:hover { color: var(--text); border-color: var(--ruby); }
+
+.msg-user { align-self: flex-end; max-width: 80%; background: var(--raised); border-radius: 12px; padding: 10px 14px; }
+.msg-ai { display: flex; gap: 12px; align-items: flex-start; }
+.msg-ai .av { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; }
+.msg-ai .body { min-width: 0; flex: 1; }
+.meta { font-size: 12px; color: var(--faint); margin-bottom: 4px; }
+.md { font-size: 14.5px; line-height: 1.6; }
+.md h3 { font-size: 15px; margin: 16px 0 6px; font-weight: 600; }
+.md p { margin: 6px 0; }
+.md ul { margin: 6px 0; padding-left: 20px; }
+.md li { margin: 3px 0; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface); color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.neg { color: var(--down); } .pos { color: var(--up); }
+.sources { font-size: 12px; color: var(--faint); margin-top: 10px; }
+.note { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--muted); font-size: 13px; }
+.note a, .live a { color: var(--ruby-text); }
+.live { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
+
+/* ---------- Agent dots + composer ---------- */
+.dock { padding: 10px 20px 14px; }
+.dock .col { gap: 10px; }
+.agents { display: flex; justify-content: center; gap: 14px; }
+.agent { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; color: var(--faint); font-size: 11px; padding: 2px 4px; }
+.agent .ring { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); opacity: 0.45; transition: opacity 0.15s ease, background 0.15s ease; }
+.agent:hover .ring { opacity: 0.8; }
+.agent.on { color: var(--text); }
+.agent.on .ring { opacity: 1; background: var(--ruby); border-color: var(--ruby); }
+.composer { border: 1px solid rgba(155, 17, 30, 0.7); background: var(--surface); border-radius: 14px; padding: 10px 10px 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.composer textarea { width: 100%; border: 0; outline: 0; resize: none; background: transparent; color: var(--text); font: 14.5px/1.5 var(--font); min-height: 44px; max-height: 160px; }
+.composer textarea::placeholder { color: var(--faint); }
+.cbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.assets { position: relative; }
+.assetbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--muted); }
+.assetbtn:hover { color: var(--text); }
+.assetmenu { position: absolute; bottom: 38px; left: 0; width: 170px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 5px; box-shadow: 0 10px 28px rgba(0,0,0,0.45); z-index: 5; }
+.assetmenu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 9px; border: 0; background: none; border-radius: 6px; font-size: 13px; text-align: left; }
+.assetmenu button:hover, .assetmenu button[aria-checked="true"] { background: var(--raised); }
+.symbol { width: 112px; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 9px; font: 13px var(--mono); text-transform: uppercase; }
+.symbol::placeholder { color: var(--faint); text-transform: none; }
+.send { margin-left: auto; width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--ruby); color: #fff; display: grid; place-items: center; }
+.send:hover { background: var(--ruby-hi); }
+.disclaimer { text-align: center; font-size: 12px; color: var(--faint); }
+
+/* ---------- Artifacts drawer ---------- */
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 100%); background: var(--panel); border-left: 1px solid var(--line); padding: calc(16px + env(safe-area-inset-top, 0px)) 18px 18px; display: flex; flex-direction: column; gap: 12px; z-index: 20; box-shadow: -12px 0 32px rgba(0,0,0,0.4); }
+.drawer header { display: flex; align-items: center; justify-content: space-between; }
+.drawer h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.art { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px; }
+.art b { display: block; margin-bottom: 2px; }
+.art span { color: var(--muted); font-size: 12px; }
+
+.scrim { display: none; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { position: fixed; inset: 0 auto 0 0; width: min(300px, 86vw); z-index: 15; transform: translateX(-102%); transition: transform 0.2s ease; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  .app.nav-open .side { transform: none; }
+  .app.nav-open .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 14; }
+  .menu-toggle { display: grid; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .topbar, .thread, .dock { padding-left: 16px; padding-right: 16px; }
+  .badge .long { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="Navigation">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M15.2 2 5 14.6h6.6L9.8 24 21 10.6h-6.7L15.2 2Z" fill="#9B111E"/></svg>
+      Aura Invest AI
+    </div>
+    <button class="newchat" id="newchat" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      New Chat
+    </button>
+    <button class="navrow" id="open-artifacts" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+      Artifacts
+    </button>
+    <button class="navrow" id="open-settings" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      Settings
+    </button>
+    <div class="label">Workspaces</div>
+    <nav class="groups" id="groups"></nav>
+    <div class="profile">
+      <div class="avatar" aria-hidden="true">R</div>
+      <div class="who"><b>Roman</b><span>Premium Plan</span></div>
+      <button class="iconbtn" id="gear" type="button" aria-label="Account and integrations" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="menu" id="gearmenu" hidden>
+        <h4>Claude usage</h4>
+        <div class="mrow"><span>Billed through n8n AI credits</span></div>
+        <h4>Connectors</h4>
+        <div class="mrow"><span><i class="dot ok"></i>Binance spot &amp; futures</span><span>Live</span></div>
+        <div class="mrow"><span><i class="dot ok"></i>Yahoo Finance charts</span><span>Live</span></div>
+        <div class="mrow"><span><i class="dot ok"></i>Brave news search</span><span>Live</span></div>
+        <div class="mrow"><span><i class="dot wait"></i>SEC EDGAR filings</span><span>Setting up</span></div>
+        <div class="mrow"><span><i class="dot wait"></i>FRED macro data</span><span>Setting up</span></div>
+        <button class="mbtn" type="button" id="signout">Sign out</button>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="iconbtn menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="crumb" id="crumb"></div>
+      <span class="badge" id="badge"></span>
+    </header>
+    <section class="thread" id="thread" aria-live="polite"><div class="col" id="col"></div></section>
+    <div class="dock">
+      <div class="col">
+        <div class="agents" id="agents" role="tablist" aria-label="Agents"></div>
+        <form class="composer" id="composer">
+          
+          <textarea id="prompt" rows="2" placeholder="Ask the agent…" aria-label="Message"></textarea>
+          <div class="cbar">
+            <div class="assets">
+              <button class="assetbtn" id="assetbtn" type="button" aria-haspopup="menu" aria-expanded="false">
+                <span id="assetlabel">Assets</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="assetmenu" id="assetmenu" role="menu" hidden></div>
+            </div>
+            <input class="symbol" id="symbol" type="text" placeholder="Symbol" aria-label="Symbol" autocomplete="off">
+            <button class="send" type="submit" aria-label="Send message">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+        </form>
+        <div class="disclaimer">Aura shares market analysis for information only. It is not investment advice.</div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="drawer" id="drawer" hidden aria-label="Artifacts">
+    <header>
+      <h2>Artifacts</h2>
+      <button class="iconbtn" id="close-drawer" type="button" aria-label="Close artifacts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <p style="margin:0;color:var(--muted)">Research the agents save for you: stock deep dives, 2030 theses, portfolio reviews and big tables.</p>
+    <div class="art"><b>NVDA 2030 thesis</b><span>Horizon 2030 · Auditor agent · appears here when generated</span></div>
+    <div class="art"><b>Portfolio review</b><span>Macro &amp; Portfolio · Macro Strategist · appears here when generated</span></div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  var TRADING_CHAT = 'https://romashsqqq.app.n8n.cloud/webhook/c42e8eba-b246-40b8-bc07-8d41856046e0/chat';
+
+  var icons = {
+    main: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" fill="currentColor" stroke="none"/></svg>',
+    trading: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7v10M4 9h3v5H4M18 5v12M16.5 8h3v6h-3" stroke="currentColor" stroke-width="1.5"/><path d="M13 3 8 13h3.5l-1 8L16 10h-3.5l.5-7Z" fill="currentColor"/></svg>',
+    horizon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5 4.5 5.5v6c0 4.6 3.2 8.3 7.5 10 4.3-1.7 7.5-5.4 7.5-10v-6L12 2.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 15v-2.5M11 15v-4.5M13.5 15V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16.8" cy="15.6" r="2.6" fill="currentColor"/><path d="M16.8 14.3v2.6" stroke="#121214" stroke-width="1"/></svg>',
+    portfolio: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v15M7 20h10M5 6.5h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 7 2.5 13a2.5 2.5 0 0 0 5 0L5 7Z" stroke="currentColor" stroke-width="1.3"/><circle cx="5" cy="12.6" r="1.5" fill="currentColor"/><path d="M19 7l-2.5 6a2.5 2.5 0 0 0 5 0L19 7Z" stroke="currentColor" stroke-width="1.3"/><path d="M17.3 13.4h3.4l-.6-1.5h-2.2l-.6 1.5Z" fill="currentColor"/></svg>'
+  };
+  var pinIcon = '<svg class="pin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 17v5M8 3h8l-1 7 3 3v2H6v-2l3-3-1-7Z"/></svg>';
+  var miniChart = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>';
+
+  var W = {
+    main: { name: 'Main', agent: 'Main agent', status: 'building', desc: 'Your hub: market overview, concepts and where to dig deeper.',
+      does: 'Cross-asset overview of BTC, ETH, S&P 500, Nasdaq, gold, 10Y yield and Fear & Greed, plus the news behind the moves.',
+      data: 'Binance, Yahoo Finance, alternative.me, Brave news.', how: 'Sends deep questions to the right workspace.',
+      prompts: ['What moved markets in the last 24 hours?', 'Compare Bitcoin and gold as hedges', 'How do Fed rate decisions affect crypto?'],
+      chats: [] },
+    trading: { name: 'Trading Space', agent: 'Scanner agent', status: 'live', desc: 'Short-term setups from live candles, order books and positioning.',
+      does: 'Key levels, trend and momentum, order book walls, taker flow, whale prints, funding, open interest, long/short ratio.',
+      data: 'Binance spot and futures (live), Yahoo Finance for stocks, indices and gold, news.', how: 'Bias with confidence, scenarios with trigger, target and invalidation.',
+      prompts: ['Key levels for BTCUSDT on the 1h chart', 'Funding and open interest check for ETH', 'Gold: breakout or fake-out this week?'],
+      chats: ['BTC Scalping Signals', 'NASDAQ Order Book Analysis', 'Gold Volatility Play', 'Leverage Risk Check'] },
+    horizon: { name: 'Horizon 2030', agent: 'Auditor agent', status: 'building', desc: 'Long-term theses from filings, insiders and megatrends.',
+      does: 'Business moat, 5-year financials, insider buying, 2030 bear / base / bull scenarios with explicit assumptions.',
+      data: 'SEC EDGAR 10-K and 10-Q filings, price history, DefiLlama for crypto, web research.', how: 'Conviction level, risks and what would change the view. Full theses go to Artifacts.',
+      prompts: ['Build a 2030 thesis for NVDA', 'How healthy are Tesla’s financials?', 'Ethereum as a 2030 holding: bull and bear case'],
+      chats: ['TSLA 2030 Thesis', 'AI Sector Growth', 'ETF Dividend Portfolio', 'Nvidia Q3 Analysis'] },
+    portfolio: { name: 'Macro & Portfolio', agent: 'Macro Strategist', status: 'building', desc: 'Your crypto and stock portfolio against the macro regime.',
+      does: 'Live valuation of your holdings, health score 0–100, macro regime from Fed, inflation and jobs data, rebalancing ideas.',
+      data: 'Your holdings, Binance and Yahoo prices, FRED macro series, Fear & Greed, FX rates.', how: 'Allocation vs targets for your risk profile, staged moves in percentage points.',
+      prompts: ['Show my live portfolio', 'Review my portfolio against today’s macro regime', 'Am I too concentrated anywhere?'],
+      chats: ['FED Rate Hike Impact', 'Global Inflation Update', 'Portfolio Rebalancing', 'Risk Exposure Report'] }
+  };
+  var order = ['trading', 'horizon', 'portfolio'];
+
+  var LIVE_REPLY =
+    '<p><b>Bottom line:</b> BTCUSDT has a bearish 1h bias, medium confidence. Price sits at 83,336 (−2.75% in 24h) after breaking down from 85.5k into a range near the lows. Flow is only mildly sell-leaning and there are no whale prints.</p>' +
+    '<p class="meta">Data as of about 18:27 UTC</p>' +
+    '<h3>Snapshot</h3><div class="tbl"><table><tr><th>Item</th><th>Value</th></tr>' +
+    '<tr><td>Last price</td><td class="num">83,336</td></tr>' +
+    '<tr><td>24h range</td><td class="num">82,787 – 85,724</td></tr>' +
+    '<tr><td>4h structure</td><td>Lower highs: <span class="num">86,999 → 86,725 → 85,860 → 84,379</span></td></tr>' +
+    '<tr><td>Open interest</td><td class="num">7.94B <span class="neg">(−3% vs 24h)</span></td></tr></table></div>' +
+    '<h3>Key levels</h3><div class="tbl"><table><tr><th>Level</th><th>Price</th><th>Why</th></tr>' +
+    '<tr><td>Resistance</td><td class="num">85,724</td><td>24h high</td></tr>' +
+    '<tr><td>Resistance</td><td class="num">84,379</td><td>Swing high after the breakdown</td></tr>' +
+    '<tr><td>Pivot</td><td class="num">83,577</td><td>Low of the breakdown candle</td></tr>' +
+    '<tr><td>Support</td><td class="num">82,818</td><td>Secondary low</td></tr>' +
+    '<tr><td>Support</td><td class="num">82,787</td><td>24h low</td></tr></table></div>' +
+    '<h3>Flow and positioning</h3><ul>' +
+    '<li><b>Taker flow:</b> the big down hours were sell-leaning, about 46–48% taker buys. The current hour is about 65% buys.</li>' +
+    '<li><b>Whales:</b> none. The largest of the last 300 trades was about $92k, below the $250k threshold.</li>' +
+    '<li><b>Order book:</b> no walls, and the top of the book is balanced.</li>' +
+    '<li><b>Funding:</b> −0.0006% per 8h (about −0.66% annualized).</li>' +
+    '<li><b>Long/short:</b> rose from 1.07 to 1.65 while price fell. Crowded dip-buying longs add downside risk if 82.8k fails.</li></ul>' +
+    '<h3>Scenarios</h3><ul>' +
+    '<li><b>Bullish:</b> a 1h close above 84,379 targets 85,724, with a stop below 83,400 (about 1.32R).</li>' +
+    '<li><b>Bearish:</b> a 1h close below 82,787 with dominant taker selling.</li>' +
+    '<li><b>Invalidation:</b> a 1h close above 84,379 weakens the bearish bias.</li></ul>' +
+    '<p class="sources">Sources: Binance spot candles 1h and 4h, 24h ticker, order book, aggregated trades; Binance futures funding, open interest and long/short ratio.</p>';
+
+  var state = { ws: 'trading', chat: 'BTC Scalping Signals', asset: null, closed: {} };
+  try { var saved = JSON.parse(localStorage.getItem('aura-demo') || 'null'); if (saved && W[saved.ws]) { state.ws = saved.ws; state.chat = saved.chat; state.closed = saved.closed || {}; } } catch (e) {}
+  function save() { try { localStorage.setItem('aura-demo', JSON.stringify({ ws: state.ws, chat: state.chat, closed: state.closed })); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, html) { var n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function text(tag, cls, t) { var n = document.createElement(tag); if (cls) n.className = cls; n.textContent = t; return n; }
+
+  function renderGroups() {
+    var nav = $('groups'); nav.innerHTML = '';
+    order.forEach(function (key) {
+      var w = W[key];
+      var g = el('div', 'group' + (state.closed[key] ? ' closed' : '') + (state.ws === key ? ' active' : ''));
+      var head = el('div', 'ghead');
+      var tog = el('button', 'gtoggle', '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>');
+      tog.type = 'button'; tog.setAttribute('aria-expanded', state.closed[key] ? 'false' : 'true');
+      tog.appendChild(text('span', 'gname', w.name));
+      tog.onclick = function () { state.closed[key] = !state.closed[key]; save(); renderGroups(); };
+      var plus = el('button', 'gplus', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>');
+      plus.type = 'button'; plus.setAttribute('aria-label', 'New chat in ' + w.name);
+      plus.onclick = function () { open(key, null); };
+      head.appendChild(tog); head.appendChild(plus); g.appendChild(head);
+      var ul = el('ul', 'chats');
+      if (key === 'portfolio') {
+        var li0 = el('li'); var b0 = el('button', 'chat pinned' + (state.ws === key && state.chat === 'Portfolio chat' ? ' current' : ''));
+        b0.type = 'button'; b0.innerHTML = pinIcon; b0.appendChild(text('span', 'grow', 'Portfolio chat')); b0.insertAdjacentHTML('beforeend', miniChart);
+        b0.onclick = function () { open('portfolio', 'Portfolio chat'); }; li0.appendChild(b0); ul.appendChild(li0);
+      }
+      w.chats.forEach(function (c) {
+        var li = el('li'); var b = text('button', 'chat' + (state.ws === key && state.chat === c ? ' current' : ''), c);
+        b.type = 'button'; b.onclick = function () { open(key, c); }; li.appendChild(b); ul.appendChild(li);
+      });
+      g.appendChild(ul); nav.appendChild(g);
+    });
+  }
+
+  function renderAgents() {
+    var box = $('agents'); box.innerHTML = '';
+    order.forEach(function (key) {
+      var b = el('button', 'agent' + (state.ws === key ? ' on' : ''));
+      b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', state.ws === key ? 'true' : 'false');
+      b.title = W[key].agent + ' · ' + W[key].name;
+      b.innerHTML = '<span class="ring">' + icons[key] + '</span>';
+      b.appendChild(text('span', '', W[key].agent));
+      b.onclick = function () { open(key, null); };
+      box.appendChild(b);
+    });
+  }
+
+  function renderThread() {
+    var w = W[state.ws]; var col = $('col'); col.innerHTML = '';
+    var crumb = $('crumb'); crumb.innerHTML = ''; crumb.appendChild(document.createTextNode(w.name + ' / '));
+    crumb.appendChild(text('b', '', state.chat || 'New chat'));
+    var badge = $('badge'); badge.className = 'badge' + (w.status === 'live' ? '' : ' building');
+    badge.innerHTML = '<i></i>'; badge.appendChild(document.createTextNode(w.agent + ' '));
+    badge.appendChild(text('span', 'long', w.status === 'live' ? '· live in n8n' : '· being built'));
+    $('prompt').placeholder = 'Ask the ' + w.agent + '…';
+
+    var intro = el('div', 'intro');
+    var ic = el('div', '', ''); ic.style.color = 'var(--ruby-text)'; ic.innerHTML = icons[state.ws].replace(/width="2\d"/, 'width="40"').replace(/height="2\d"/, 'height="40"');
+    intro.appendChild(ic);
+    intro.appendChild(text('h1', '', w.name + ' · ' + w.agent));
+    intro.appendChild(text('p', '', w.desc));
+    var facts = el('div', 'facts');
+    [['What it does', w.does], ['Data it reads', w.data], ['What you get', w.how]].forEach(function (f) {
+      var c = el('div', 'fact'); c.appendChild(text('h3', '', f[0])); c.appendChild(text('p', '', f[1])); facts.appendChild(c);
+    });
+    intro.appendChild(facts);
+    var chips = el('div', 'chips');
+    w.prompts.forEach(function (p) { var b = text('button', 'chipq', p); b.type = 'button'; b.onclick = function () { $('prompt').value = p; $('prompt').focus(); }; chips.appendChild(b); });
+    intro.appendChild(chips);
+    col.appendChild(intro);
+
+    if (state.ws === 'trading') {
+      col.appendChild(text('div', 'msg-user', 'Key levels for BTCUSDT on the 1h chart today, with order flow, whales and funding.'));
+      var ai = el('div', 'msg-ai');
+      var av = el('div', 'av', icons.trading); av.style.color = 'var(--ruby-text)';
+      var body = el('div', 'body');
+      body.appendChild(text('div', 'meta', 'Scanner agent · real reply from the live n8n agent, Oct 7 2026, 18:27 UTC'));
+      body.appendChild(el('div', 'md', LIVE_REPLY));
+      var live = el('div', 'live'); var a = text('a', '', 'Open the live Scanner agent chat →'); a.href = TRADING_CHAT; a.target = '_blank'; a.rel = 'noopener'; live.appendChild(a);
+      body.appendChild(live);
+      ai.appendChild(av); ai.appendChild(body); col.appendChild(ai);
+    } else if (state.ws === 'portfolio' && state.chat === 'Portfolio chat') {
+      col.appendChild(el('div', 'note', '<b style="color:var(--text)">Pinned control panel.</b> Your holdings, live value, P&amp;L and health score live here. Add holdings in plain words, for example “Add 0.35 BTC at 52,000 and 40 NVDA at 92”, and the Macro Strategist keeps them. This agent is being built right now in n8n.'));
+    } else {
+      col.appendChild(el('div', 'note', 'The ' + w.agent + ' is being built right now in n8n. Its tools and prompt are ready; this chat connects as soon as it passes its tests.'));
+    }
+    $('thread').scrollTop = 0;
+  }
+
+  function open(ws, chat) { state.ws = ws; state.chat = chat; save(); renderGroups(); renderAgents(); renderThread(); $('app').classList.remove('nav-open'); }
+
+  var ASSETS = [
+    ['Crypto', 'BTCUSDT', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 7.5v9M9.5 8h4a2 2 0 0 1 0 4h-4m0 0h4.5a2 2 0 0 1 0 4H9.5M11 6v2M11 16v2"/></svg>'],
+    ['Stocks', 'NVDA', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>'],
+    ['Indices', '^GSPC', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'],
+    ['Gold', 'GC=F', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h8l-1.5-5h-5L3 18ZM13 18h8l-1.5-5h-5L13 18ZM8 11h8l-1.5-5h-5L8 11Z"/></svg>']
+  ];
+  function renderAssets() {
+    var m = $('assetmenu'); m.innerHTML = '';
+    ASSETS.forEach(function (a) {
+      var b = el('button', '', a[2]); b.type = 'button'; b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', state.asset === a[0] ? 'true' : 'false');
+      b.appendChild(document.createTextNode(a[0]));
+      b.onclick = function () { state.asset = a[0]; $('assetlabel').textContent = a[0]; $('symbol').placeholder = a[1]; m.hidden = true; $('assetbtn').setAttribute('aria-expanded', 'false'); renderAssets(); };
+      m.appendChild(b);
+    });
+  }
+
+  $('assetbtn').onclick = function () { var m = $('assetmenu'); m.hidden = !m.hidden; this.setAttribute('aria-expanded', String(!m.hidden)); };
+  $('gear').onclick = function () { var m = $('gearmenu'); m.hidden = !m.hidden; this.setAttribute('aria-expanded', String(!m.hidden)); };
+  $('signout').onclick = function () { $('gearmenu').hidden = true; };
+  $('newchat').onclick = function () { open('main', null); };
+  $('open-artifacts').onclick = function () { $('drawer').hidden = false; $('app').classList.remove('nav-open'); };
+  $('close-drawer').onclick = function () { $('drawer').hidden = true; };
+  $('open-settings').onclick = function () { $('gear').click(); };
+  $('menu-toggle').onclick = function () { $('app').classList.add('nav-open'); };
+  $('scrim').onclick = function () { $('app').classList.remove('nav-open'); };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('drawer').hidden = true; $('gearmenu').hidden = true; $('assetmenu').hidden = true; $('app').classList.remove('nav-open'); } });
+  $('prompt').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('composer').requestSubmit(); } });
+  $('composer').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var t = $('prompt').value.trim(); if (!t) return;
+    var w = W[state.ws];
+    $('col').appendChild(text('div', 'msg-user', t));
+    var n = el('div', 'note');
+    if (state.ws === 'trading') { n.innerHTML = 'This preview page can’t call n8n. Ask the live Scanner agent here: '; var a = text('a', '', 'open live chat →'); a.href = TRADING_CHAT; a.target = '_blank'; a.rel = 'noopener'; n.appendChild(a); }
+    else { n.textContent = 'In the app this message goes straight to the ' + w.agent + ' in n8n. It goes live as soon as the agent passes its tests.'; }
+    $('col').appendChild(n);
+    $('prompt').value = '';
+    $('thread').scrollTop = $('thread').scrollHeight;
+  });
+
+  if (state.ws === 'main') state.ws = 'trading';
+  renderAssets(); renderGroups(); renderAgents(); renderThread();
+})();
+</script>
