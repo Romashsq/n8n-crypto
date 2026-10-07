@@ -12,9 +12,12 @@
 <script>try { window.__AURA_CONFIG__ = __AURA_CONFIG_JSON__; } catch (e) { window.__AURA_CONFIG__ = null; }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Fonts load without blocking render; the system font stack shows until Geist arrives. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"></noscript>
+<!-- Markdown libraries: pinned versions with Subresource Integrity. If they fail to load or the hash does not match, the escaped built-in renderer is used. -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js" integrity="sha384-eEu5CTj3qGvu9PdJuS+YlkNi7d2XxQROAFYOr59zgObtlcux1ae1Il3u7jvdCSWu" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root {
   color-scheme: dark;
@@ -313,6 +316,8 @@ body.sb-collapsed .hdr-open { display: inline-grid; }
 .pf-head h2 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; }
 .pf-head p { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--text-muted); }
 .pf-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; margin-bottom: 16px; background: var(--bg-app); border-bottom: 1px solid var(--border); }
+.pf-bar .pf-actions { flex: 1 1 auto; }
 .pf-note { font-size: 12px; line-height: 16px; color: var(--warning); }
 .pf-empty { text-align: center; color: var(--text-muted); font-size: 13px; line-height: 20px; padding: 32px 12px; }
 
@@ -368,7 +373,8 @@ body.sb-collapsed .hdr-open { display: inline-grid; }
 }
 .menu-item { width: 100%; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; font-size: 13px; color: var(--text-primary); }
 .menu-item .ic { color: var(--text-secondary); }
-.menu-item:hover, .menu-item:focus-visible { background: var(--bg-active); outline: none; }
+.menu-item:hover { background: var(--bg-active); }
+.menu-item:focus-visible { background: var(--bg-active); outline: 2px solid var(--focus-ring); outline-offset: -2px; }
 .menu-item .chk { margin-left: auto; color: var(--ruby-text); }
 .menu-item.danger .ic { color: var(--ruby-text); }
 .menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
@@ -762,7 +768,9 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
   }
   const agentReady = (ws) => !!webhookFor(ws);
   const firstReadyWs = () => WS_ORDER.find(agentReady) || 'trading';
-  const defaultWs = () => (agentReady('main') ? 'main' : firstReadyWs());
+  // Main is always the home chat. While its webhook is not set, it shows the "being set up" note,
+  // which offers a button to ask the first live agent instead.
+  const defaultWs = () => 'main';
 
   /* ================= Storage ================= */
   let memPfSession = null;
@@ -807,6 +815,13 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
     }
     s.messages = s.messages && typeof s.messages === 'object' ? s.messages : {};
     Object.keys(s.messages).forEach((id) => { if (!s.chats.some((c) => c.id === id) || !Array.isArray(s.messages[id])) delete s.messages[id]; });
+    // A question still marked in flight was cut off by a reload: show an error card with Retry.
+    s.chats.forEach((c) => {
+      if (typeof c.inflight === 'string' && c.inflight) {
+        (s.messages[c.id] = s.messages[c.id] || []).push({ id: uid('m'), ts: Date.now(), role: 'error', kind: 'interrupted', ws: c.ws, retry: c.inflight, text: 'The page was reloaded before the ' + WS[c.ws].agent + ' answered. Retry to ask again.' });
+      }
+      delete c.inflight;
+    });
     s.collapsed = s.collapsed && typeof s.collapsed === 'object' ? s.collapsed : {};
     s.showAll = s.showAll && typeof s.showAll === 'object' ? s.showAll : {};
     s.draft = s.draft && typeof s.draft === 'object' ? s.draft : { ws: defaultWs(), asset: null, symbol: '' };
@@ -1123,17 +1138,20 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
       '</div>';
   }
 
-  function portfolioPanelHtml(c) {
+  // compact = true: only the quick-action buttons, as a sticky bar above a thread that has messages.
+  function portfolioPanelHtml(c, compact) {
     const ready = agentReady('portfolio');
     const busy = pending.has(c.id);
     const dis = ready && !busy ? '' : ' disabled';
-    return '<section class="pf-panel" aria-label="Portfolio quick actions">' +
-      '<div class="pf-head">' + icon('pin', 16) + '<div><h2>Portfolio chat</h2><p>Holdings you add here are saved by the Portfolio agent and linked to this device.</p></div></div>' +
-      '<div class="pf-actions">' +
+    const actions = '<div class="pf-actions">' +
       '<button type="button" class="btn secondary" data-act="pf-show"' + dis + '>' + icon('chartPie', 16) + 'Show my live portfolio</button>' +
       '<button type="button" class="btn primary" data-act="pf-review"' + dis + '>' + icon('shieldCheck', 16) + 'Run portfolio review</button>' +
       '<button type="button" class="btn secondary" data-act="pf-add">' + icon('plus', 16) + 'Add holdings</button>' +
-      '</div>' +
+      '</div>';
+    if (compact) return '<div class="pf-bar" role="group" aria-label="Portfolio quick actions">' + actions + '</div>';
+    return '<section class="pf-panel" aria-label="Portfolio quick actions">' +
+      '<div class="pf-head">' + icon('pin', 16) + '<div><h2>Portfolio chat</h2><p>Holdings you add here are saved by the Portfolio agent and linked to this device.</p></div></div>' +
+      actions +
       (ready ? '' : '<div class="pf-note">The Portfolio agent is being set up. Quick actions will work as soon as it is live.</div>') +
       '</section>';
   }
@@ -1178,7 +1196,11 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
       const m = msgs.find((x) => x.id === id);
       if (!m) return;
       let html = mdCache.get(id);
-      if (html == null) { html = markdownToSafeHtml(m.text); mdCache.set(id, html); }
+      if (html == null) {
+        html = markdownToSafeHtml(m.text);
+        // Cache only the full renderer's output, so fallback HTML is replaced once the libraries arrive.
+        if (window.marked && window.DOMPurify) mdCache.set(id, html);
+      }
       node.innerHTML = html; // sanitized by DOMPurify (or escaped by the fallback renderer)
       decorateMd(node);
     });
@@ -1199,7 +1221,7 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
       el.view.innerHTML = html;
       return;
     }
-    html = '<div class="col">' + (c.pinned ? portfolioPanelHtml(c) : '') + '<div class="thread" id="thread">' +
+    html = '<div class="col">' + (c.pinned ? portfolioPanelHtml(c, msgs.length > 0) : '') + '<div class="thread" id="thread">' +
       msgs.map((m) => messageHtml(c, m)).join('') + (busy ? thinkingHtml(c) : '') + '</div></div>';
     el.view.innerHTML = html;
     fillMarkdown(el.view, c.id);
@@ -1328,7 +1350,7 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
     render();
     restoreDraft();
     updateComposer();
-    scrollToBottom();
+    if (msgsOf(id).length) scrollToBottom(); else el.view.scrollTop = 0;
     focusComposer();
   }
   function openHome(ws, carryText) {
@@ -1352,6 +1374,9 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
     if (anchor) { const t = document.getElementById(anchor); if (t) { t.scrollIntoView({ block: 'start' }); const f = $('input', t); if (f) f.focus({ preventScroll: true }); } }
   }
   function createChat(ws) {
+    // Reuse an untouched "New chat" in this group instead of stacking empty rows.
+    const blank = state.chats.find((x) => x.ws === ws && x.fresh && !msgsOf(x.id).length && !pending.has(x.id));
+    if (blank) { blank.updatedAt = Date.now(); state.collapsed[ws] = false; openChat(blank.id); return blank; }
     const now = Date.now();
     const c = { id: uid('c'), ws, title: 'New chat', starter: null, icon: null, ctx: { asset: null, symbol: '' }, sessionId: newSession(ws), pinned: false, createdAt: now, updatedAt: now, fresh: true, unread: false };
     state.chats.push(c);
@@ -1481,6 +1506,8 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
     const run = { start: Date.now(), ctrl, timedOut: false };
     const timer = setTimeout(() => { run.timedOut = true; ctrl.abort(); }, TIMEOUT_MS);
     pending.set(chatId, run);
+    c.inflight = chatInput; // persisted so a reload mid-answer can offer Retry (see normalize)
+    saveNow();
     ensureTicker();
     renderSidebar();
     if (isViewing(chatId)) { renderMain(); scrollToBottom(); }
@@ -1502,7 +1529,7 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
       clearTimeout(timer);
       if (pending.get(chatId) === run) pending.delete(chatId);
       if (!pending.size) stopTicker();
-      if (chatById(chatId) && !run.cancelled) { save(); afterRun(chatId, ok); }
+      if (chatById(chatId) && !run.cancelled) { delete c.inflight; save(); afterRun(chatId, ok); }
       else if (!chatById(chatId)) { delete state.messages[chatId]; save(); }
     }
   }
@@ -1910,17 +1937,20 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
     const act = t.getAttribute('data-act');
     const c = currentChat();
     if (act === 'pick-agent') pickAgent(t.getAttribute('data-ws'));
+    // Actions below rebuild #view and remove the clicked button, so focus moves to the composer
+    // instead of falling back to <body>.
     else if (act === 'chip') {
       const text = t.getAttribute('data-prompt');
       if (c) sendInChat(c, text, c.ctx);
       else { el.input.value = text; submitComposer(); }
-    } else if (act === 'start' && c && c.starter) sendInChat(c, c.starter, c.ctx);
-    else if (act === 'retry') retryMessage(t.getAttribute('data-mid'));
+      focusComposer();
+    } else if (act === 'start' && c && c.starter) { sendInChat(c, c.starter, c.ctx); focusComposer(); }
+    else if (act === 'retry') { retryMessage(t.getAttribute('data-mid')); focusComposer(); }
     else if (act === 'copy' && c) {
       const m = msgsOf(c.id).find((x) => x.id === t.getAttribute('data-mid'));
       if (m) toast((await copyText(m.text)) ? 'Answer copied' : "Couldn't copy. Select the text instead.", undefined);
-    } else if (act === 'pf-show' && c) sendInChat(c, PF_PROMPTS.show, { asset: null, symbol: '' });
-    else if (act === 'pf-review' && c) sendInChat(c, PF_PROMPTS.review, { asset: null, symbol: '' });
+    } else if (act === 'pf-show' && c) { sendInChat(c, PF_PROMPTS.show, { asset: null, symbol: '' }); focusComposer(); }
+    else if (act === 'pf-review' && c) { sendInChat(c, PF_PROMPTS.review, { asset: null, symbol: '' }); focusComposer(); }
     else if (act === 'pf-add') {
       el.input.value = PF_PROMPTS.add;
       autosize(); updateComposer();
@@ -2012,12 +2042,14 @@ const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading:
     render();
     restoreDraft();
     updateComposer();
-    scrollToBottom();
+    if (state.selected && msgsOf(state.selected).length) scrollToBottom();
     focusComposer();
     saveNow();
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  // This script sits at the end of <body>, so the DOM is ready: start now instead of waiting for
+  // the deferred CDN scripts. When they arrive (DOMContentLoaded), re-render the open thread's markdown.
+  init();
+  document.addEventListener('DOMContentLoaded', () => { if (view === 'chat' && state.selected) fillMarkdown(el.view, state.selected); });
 })();
 </script>
 </body>
