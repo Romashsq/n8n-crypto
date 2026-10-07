@@ -1,0 +1,2024 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#131317">
+<meta name="description" content="Aura Invest AI: multi-agent market analysis for crypto, stocks, indices and gold.">
+<title>Aura Invest AI</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%239F1D35'/%3E%3Cpath d='M13.2 4.5 7.5 13.1h4.1l-.9 6.4 5.8-8.7h-4.1l.8-6.3Z' fill='%23FFFFFF'/%3E%3C/svg%3E">
+<!-- Runtime config: the n8n server replaces the placeholder token below with JSON. Unreplaced, the try/catch keeps local preview working. -->
+<script>try { window.__AURA_CONFIG__ = __AURA_CONFIG_JSON__; } catch (e) { window.__AURA_CONFIG__ = null; }</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.4/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+:root {
+  color-scheme: dark;
+  --bg-app: #0F0F12;
+  --bg-sidebar: #131317;
+  --bg-surface: #18181D;
+  --bg-raised: #1F1F25;
+  --bg-active: #26262E;
+  --border: #2A2A32;
+  --border-strong: #3A3A44;
+  --text-primary: #EDEDF0;
+  --text-secondary: #A5A5B0;
+  --text-muted: #80808C;
+  --text-on-accent: #FFFFFF;
+  --ruby-500: #B8243F;
+  --ruby-600: #9F1D35;
+  --ruby-700: #861830;
+  --ruby-text: #E8687F;
+  --ruby-tint: rgba(159, 29, 53, 0.14);
+  --ruby-tint-surface: #2B1920; /* ruby tint flattened onto --bg-surface */
+  --ruby-border: rgba(184, 36, 63, 0.45);
+  --focus-ring: #C7375A;
+  --up: #3DBE8B;
+  --down: #EF5A52;
+  --flat: #8B8B96;
+  --warning: #D9A441;
+  --info: #6F9DF2;
+  --cat-gold: #C9B458;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.40);
+  --sidebar-w: 272px;
+  --ease: cubic-bezier(.2, .7, .3, 1);
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: 400 14px/20px var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: inherit; }
+button:disabled { cursor: not-allowed; }
+a { color: var(--ruby-text); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.ic { flex-shrink: 0; display: block; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+kbd { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--text-muted); }
+
+/* ---------- App shell ---------- */
+.app { display: flex; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; }
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: var(--sidebar-w); flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--bg-sidebar); border-right: 1px solid var(--border);
+  padding-left: env(safe-area-inset-left, 0px);
+  transition: margin-left 180ms var(--ease), transform 180ms var(--ease), visibility 0s linear 0s;
+  z-index: 40; min-height: 0;
+}
+body.sb-collapsed .sidebar { margin-left: calc(-1 * var(--sidebar-w) - env(safe-area-inset-left, 0px)); visibility: hidden; transition: margin-left 180ms var(--ease), visibility 0s linear 180ms; }
+.sb-head { height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 14px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text-primary); border-radius: 6px; padding: 2px; margin-right: auto; }
+.brand:hover { text-decoration: none; }
+.wordmark { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+.sb-actions { display: flex; flex-direction: column; gap: 2px; padding: 0 8px 4px; flex-shrink: 0; }
+.sb-row {
+  display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px; border-radius: 6px;
+  color: var(--text-secondary); font-size: 13px; line-height: 18px; font-weight: 500; width: 100%;
+  transition: background-color 140ms var(--ease), color 140ms var(--ease);
+}
+.sb-row span { flex: 1; min-width: 0; }
+.sb-row:hover { background: var(--bg-raised); color: var(--text-primary); }
+.sb-row.active { background: var(--bg-active); color: var(--text-primary); }
+.sb-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 4px 8px 16px; }
+.sb-label { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); padding: 14px 8px 6px; }
+.grp { margin-bottom: 4px; }
+.grp-head { display: flex; align-items: center; gap: 4px; height: 32px; border-radius: 6px; padding-right: 4px; }
+.grp-toggle {
+  flex: 1; min-width: 0; height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 6px; border-radius: 6px;
+  color: var(--text-primary); font-size: 13px; font-weight: 600; line-height: 18px;
+  transition: background-color 140ms var(--ease);
+}
+.grp-toggle:hover { background: var(--bg-raised); }
+.grp-toggle .chev { color: var(--text-muted); transition: transform 160ms var(--ease); }
+.grp.collapsed .grp-toggle .chev { transform: rotate(-90deg); }
+.grp-toggle .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grp-add {
+  width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center; border-radius: 6px;
+  border: 1px solid var(--border); color: var(--text-muted); background: var(--bg-sidebar);
+  transition: background-color 140ms var(--ease), color 140ms var(--ease), border-color 140ms var(--ease);
+}
+.grp-add:hover { background: var(--bg-raised); color: var(--text-primary); border-color: var(--border-strong); }
+.chat-list { list-style: none; margin: 2px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.chat-row { position: relative; display: flex; align-items: center; border-radius: 6px; border: 1px solid transparent; }
+.chat-row:hover { background: var(--bg-raised); }
+.chat-row.active { background: var(--bg-active); }
+.chat-link {
+  flex: 1; min-width: 0; height: 30px; display: flex; align-items: center; gap: 8px; padding: 0 30px 0 24px; border-radius: 6px;
+  color: var(--text-secondary); font-size: 13px; line-height: 18px;
+}
+.chat-link .ctx-ic { color: var(--text-muted); }
+.chat-link .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-row:hover .chat-link, .chat-row.active .chat-link { color: var(--text-primary); }
+.chat-row.active .chat-link { font-weight: 500; }
+.chat-row.pinned { background: var(--ruby-tint); border-color: var(--ruby-border); margin: 2px 0 3px; }
+.chat-row.pinned:hover { background: rgba(159, 29, 53, 0.20); }
+.chat-row.pinned.active { background: rgba(159, 29, 53, 0.26); }
+.chat-row.pinned .chat-link { padding-left: 8px; padding-right: 8px; color: var(--text-primary); font-weight: 500; }
+.chat-row.pinned .pin-ic, .chat-row.pinned .end-ic { color: var(--ruby-text); }
+.chat-more {
+  position: absolute; right: 3px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; border-radius: 6px;
+  display: grid; place-items: center; color: var(--text-muted); opacity: 0;
+  transition: opacity 120ms var(--ease), background-color 120ms var(--ease);
+}
+.chat-row:hover .chat-more, .chat-row:focus-within .chat-more, .chat-more[aria-expanded="true"] { opacity: 1; }
+.chat-more:hover, .chat-more[aria-expanded="true"] { background: var(--bg-active); color: var(--text-primary); }
+.row-dot { position: absolute; right: 11px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: var(--ruby-text); pointer-events: none; }
+.row-dot.busy { background: var(--text-muted); animation: pulse 1.2s ease-in-out infinite; }
+.chat-row:hover .row-dot, .chat-row:focus-within .row-dot { display: none; }
+.rename-input {
+  flex: 1; min-width: 0; height: 28px; margin: 1px 2px 1px 20px; padding: 0 8px; border-radius: 6px;
+  background: var(--bg-app); border: 1px solid var(--ruby-border); color: var(--text-primary); font-size: 13px;
+}
+.show-all { margin: 0 0 4px 24px; height: 26px; padding: 0 6px; border-radius: 6px; font-size: 12px; color: var(--text-muted); }
+.show-all:hover { color: var(--text-primary); background: var(--bg-raised); }
+.profile { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-top: 1px solid var(--border); padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.avatar { width: 28px; height: 28px; border-radius: 999px; flex-shrink: 0; display: grid; place-items: center; background: var(--bg-active); border: 1px solid var(--border-strong); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--text-primary); }
+.profile-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+.profile-name .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 500; line-height: 16px; }
+.pill.ruby { background: var(--ruby-tint); color: var(--ruby-text); }
+.pill.muted { background: var(--bg-raised); color: var(--text-muted); border: 1px solid var(--border); }
+.icon-btn {
+  width: 32px; height: 32px; flex-shrink: 0; display: inline-grid; place-items: center; border-radius: 6px; color: var(--text-secondary);
+  transition: background-color 140ms var(--ease), color 140ms var(--ease);
+}
+.icon-btn:hover, .icon-btn[aria-expanded="true"] { background: var(--bg-raised); color: var(--text-primary); }
+.scrim { display: none; }
+
+/* ---------- Main ---------- */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; background: var(--bg-app); }
+.chat-header {
+  height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--border);
+}
+.hdr-open { display: none; }
+body.sb-collapsed .hdr-open { display: inline-grid; }
+.crumbs { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; white-space: nowrap; }
+.crumb-ws { color: var(--text-secondary); flex-shrink: 0; }
+.crumb-sep { color: var(--text-muted); flex-shrink: 0; }
+.crumb-cur { color: var(--text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.crumb-input { flex: 1; min-width: 80px; max-width: 360px; height: 30px; padding: 0 8px; border-radius: 6px; background: var(--bg-surface); border: 1px solid var(--ruby-border); font-size: 13px; }
+.hdr-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.agent-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 7px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary); font-size: 12px; font-weight: 500; }
+.agent-badge .ic { color: var(--ruby-text); }
+.sym-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid var(--border); font: 500 12px/16px var(--font-mono); color: var(--text-primary); letter-spacing: 0.02em; }
+.hdr-new { display: none; }
+
+.view { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.col { max-width: 768px; margin: 0 auto; padding: 24px 24px 32px; }
+
+/* ---------- Empty state & agent tiles ---------- */
+.empty { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; gap: 16px; }
+.agent-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+.agent-tile {
+  --a-line: #7A7A86; --a-fill: #3A3A44; --a-surface: #222229; --a-accent: #8B8B96; --a-hi: #B4B4BE; --a-gold: #8B8B96; --a-cut: var(--bg-surface);
+  width: 124px; padding: 14px 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text-secondary);
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease);
+}
+.agent-tile:hover { background: var(--bg-raised); border-color: var(--border-strong); color: var(--text-primary); --a-cut: var(--bg-raised); }
+.agent-tile .lbl { font-size: 12px; line-height: 16px; font-weight: 500; }
+.agent-tile .soon { font-size: 11px; line-height: 14px; color: var(--text-muted); }
+.agent-tile.active, .art-on {
+  --a-line: #E8687F; --a-fill: #9F1D35; --a-surface: #3A1A24; --a-accent: #E8687F; --a-hi: #FFFFFF; --a-gold: #C9B458; --a-cut: var(--ruby-tint-surface);
+}
+.agent-tile.active { background: var(--ruby-tint-surface); border-color: var(--ruby-border); color: var(--text-primary); }
+.agent-tile svg.art { width: 56px; height: 56px; }
+.empty-title { margin: 4px 0 0; font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.empty-desc { margin: 0; max-width: 52ch; color: var(--text-secondary); font-size: 14px; line-height: 20px; }
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 640px; margin-top: 8px; }
+.chip {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 12px; border-radius: 10px; text-align: left;
+  background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-secondary); font-size: 13px; line-height: 18px;
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease);
+}
+.chip span { flex: 1; }
+.chip .ic { color: var(--text-muted); }
+.chip:hover:not(:disabled) { background: var(--bg-raised); border-color: var(--border-strong); color: var(--text-primary); }
+.chip:disabled { opacity: 0.55; }
+
+/* Topic (seeded chat) intro */
+.topic { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 32px 24px; gap: 12px; }
+.topic-art { width: 88px; height: 88px; border-radius: 16px; display: grid; place-items: center; background: var(--ruby-tint-surface); border: 1px solid var(--ruby-border); --a-cut: var(--ruby-tint-surface); }
+.topic-art svg { width: 60px; height: 60px; }
+.topic-meta { font-size: 12px; line-height: 16px; color: var(--text-muted); margin-top: 4px; }
+.topic-title { margin: 0; font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.starter-card { width: 100%; max-width: 560px; text-align: left; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
+.starter-label { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.starter-card p { margin: 0; color: var(--text-primary); font-size: 14px; line-height: 21px; }
+.ctx-tag { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--border); font: 500 11px/16px var(--font-mono); color: var(--text-secondary); }
+.topic-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+.hint { font-size: 12px; line-height: 16px; color: var(--text-muted); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 6px;
+  font-size: 13px; line-height: 18px; font-weight: 500; border: 1px solid transparent; white-space: nowrap;
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease);
+}
+.btn.lg { height: 38px; padding: 0 16px; font-size: 14px; }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn.primary { background: var(--ruby-600); color: var(--text-on-accent); }
+.btn.primary:hover:not(:disabled) { background: var(--ruby-500); }
+.btn.primary:active:not(:disabled) { background: var(--ruby-700); }
+.btn.secondary { background: var(--bg-raised); border-color: var(--border); color: var(--text-primary); }
+.btn.secondary:hover:not(:disabled) { background: var(--bg-active); border-color: var(--border-strong); }
+.btn.ghost { color: var(--text-secondary); }
+.btn.ghost:hover:not(:disabled) { background: var(--bg-raised); color: var(--text-primary); }
+.btn:disabled { opacity: 0.5; }
+.btn.primary:disabled { background: var(--bg-raised); color: var(--text-muted); opacity: 1; border-color: var(--border); }
+
+/* ---------- Thread ---------- */
+.thread { display: flex; flex-direction: column; gap: 22px; }
+.msg-user { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.bubble { max-width: 80%; background: var(--bg-raised); border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 21px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-ctx { font: 500 11px/16px var(--font-mono); color: var(--text-muted); }
+.msg-ai { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ai-head { display: flex; align-items: center; gap: 8px; }
+.ai-avatar { width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; flex-shrink: 0; background: var(--bg-surface); border: 1px solid var(--border); color: var(--ruby-text); }
+.ai-meta { font-size: 12px; line-height: 16px; color: var(--text-muted); }
+.ai-meta b { color: var(--text-secondary); font-weight: 500; }
+.ai-actions { display: flex; gap: 2px; margin-top: -2px; }
+.ai-actions .icon-btn { width: 28px; height: 28px; color: var(--text-muted); }
+.ai-actions .icon-btn:hover { color: var(--text-primary); }
+
+.md { font-size: 15px; line-height: 24px; color: var(--text-primary); overflow-wrap: anywhere; min-width: 0; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0 0 12px; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { font-size: 16px; line-height: 22px; font-weight: 600; margin: 20px 0 8px; }
+.md ul, .md ol { margin: 0 0 12px; padding-left: 22px; }
+.md li { margin: 4px 0; }
+.md li::marker { color: var(--text-muted); }
+.md strong { font-weight: 600; color: var(--text-primary); }
+.md em { color: var(--text-primary); }
+.md code { font-family: var(--font-mono); font-size: 13px; background: var(--bg-raised); border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; }
+.md pre { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; overflow-x: auto; margin: 0 0 12px; }
+.md pre code { background: none; border: 0; padding: 0; font-size: 13px; line-height: 20px; }
+.md blockquote { margin: 0 0 12px; padding: 2px 0 2px 12px; border-left: 2px solid var(--border-strong); color: var(--text-secondary); }
+.md a { color: var(--ruby-text); }
+.md hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+.md img { max-width: 100%; height: auto; border-radius: 6px; }
+.table-wrap { width: 100%; overflow-x: auto; margin: 4px 0 14px; border: 1px solid var(--border); border-radius: 10px; }
+.md table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 18px; }
+.md th { background: var(--bg-surface); color: var(--text-secondary); font-weight: 500; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.md td { padding: 8px 12px; border-top: 1px solid var(--border); vertical-align: top; }
+.md tbody tr:first-child td { border-top: 0; }
+.md th.num, .md td.num { text-align: right; }
+.md td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.md td.up { color: var(--up); }
+.md td.down { color: var(--down); }
+
+.thinking { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; line-height: 18px; }
+.thinking .lbl { min-width: 0; }
+.dots { display: inline-flex; gap: 4px; margin-left: 2px; }
+.dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); animation: pulse 1.2s ease-in-out infinite; }
+.dots i:nth-child(2) { animation-delay: 0.2s; }
+.dots i:nth-child(3) { animation-delay: 0.4s; }
+.elapsed { font: 400 12px/16px var(--font-mono); color: var(--text-muted); margin-left: auto; padding-left: 8px; }
+@keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.err-card { display: flex; gap: 10px; align-items: flex-start; background: var(--bg-surface); border: 1px solid rgba(239, 90, 82, 0.4); border-radius: 10px; padding: 12px 14px; }
+.err-card .ic { color: var(--down); margin-top: 2px; }
+.err-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.err-text { font-size: 14px; line-height: 20px; color: var(--text-primary); }
+.err-detail { font: 400 12px/16px var(--font-mono); color: var(--text-muted); overflow-wrap: anywhere; }
+
+/* ---------- Portfolio panel ---------- */
+.pf-panel { background: var(--bg-surface); border: 1px solid var(--ruby-border); border-radius: 10px; padding: 14px 16px; margin-bottom: 24px; display: flex; flex-direction: column; gap: 12px; }
+.pf-head { display: flex; gap: 10px; align-items: flex-start; }
+.pf-head .ic { color: var(--ruby-text); margin-top: 3px; }
+.pf-head h2 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; }
+.pf-head p { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: var(--text-muted); }
+.pf-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pf-note { font-size: 12px; line-height: 16px; color: var(--warning); }
+.pf-empty { text-align: center; color: var(--text-muted); font-size: 13px; line-height: 20px; padding: 32px 12px; }
+
+/* ---------- Composer ---------- */
+.dock { flex-shrink: 0; padding: 8px 24px 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--bg-app); }
+.dock-inner { max-width: 768px; margin: 0 auto; }
+.setup-note { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 8px; border-radius: 10px; background: var(--bg-surface); border: 1px solid var(--border); font-size: 13px; line-height: 18px; color: var(--text-secondary); }
+.setup-note .ic { color: var(--warning); }
+.setup-note .txt { flex: 1; min-width: 180px; }
+.composer { display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--ruby-border); border-radius: 12px; transition: border-color 140ms var(--ease); }
+.composer:focus-within { border-color: var(--ruby-500); }
+.composer textarea {
+  display: block; width: 100%; resize: none; border: 0; background: transparent; color: var(--text-primary);
+  padding: 14px 16px 6px; font-size: 15px; line-height: 22px; min-height: 42px; max-height: 196px; overflow-y: auto;
+}
+.composer textarea::placeholder { color: var(--text-muted); }
+.composer textarea:focus-visible { outline: none; }
+.composer-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 8px 10px; }
+.asset-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px 0 9px; border-radius: 8px;
+  border: 1px solid var(--border); color: var(--text-secondary); font-size: 13px; font-weight: 500; flex-shrink: 0;
+  transition: background-color 140ms var(--ease), border-color 140ms var(--ease), color 140ms var(--ease);
+}
+.asset-btn:hover, .asset-btn[aria-expanded="true"] { background: var(--bg-raised); border-color: var(--border-strong); color: var(--text-primary); }
+.asset-btn.set { color: var(--text-primary); }
+.asset-btn .chev { color: var(--text-muted); }
+.symbol {
+  width: 132px; min-width: 0; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-app);
+  font: 500 12.5px/16px var(--font-mono); letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-primary);
+  transition: border-color 140ms var(--ease);
+}
+.symbol::placeholder { color: var(--text-muted); text-transform: none; }
+.symbol:hover { border-color: var(--border-strong); }
+.symbol:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.symbol::-webkit-calendar-picker-indicator { display: none !important; opacity: 0; }
+.grow { flex: 1; }
+.send {
+  width: 36px; height: 36px; border-radius: 999px; flex-shrink: 0; display: grid; place-items: center;
+  background: var(--ruby-600); color: var(--text-on-accent);
+  transition: background-color 140ms var(--ease);
+}
+.send:hover:not(:disabled) { background: var(--ruby-500); }
+.send:active:not(:disabled) { background: var(--ruby-700); }
+.send:disabled { background: var(--bg-raised); color: var(--text-muted); border: 1px solid var(--border); }
+.send.busy:disabled { background: var(--ruby-700); color: var(--text-on-accent); border: 0; }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #FFFFFF; animation: spin 0.8s linear infinite; }
+.disclaimer { margin: 8px 0 0; text-align: center; font-size: 12px; line-height: 16px; color: var(--text-muted); }
+
+/* ---------- Menus, palette, toasts ---------- */
+.menu {
+  position: fixed; z-index: 80; min-width: 184px; max-width: min(300px, calc(100vw - 16px)); padding: 4px; border-radius: 10px;
+  background: var(--bg-raised); border: 1px solid var(--border-strong); box-shadow: var(--shadow-float);
+}
+.menu-item { width: 100%; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: 6px; font-size: 13px; color: var(--text-primary); }
+.menu-item .ic { color: var(--text-secondary); }
+.menu-item:hover, .menu-item:focus-visible { background: var(--bg-active); outline: none; }
+.menu-item .chk { margin-left: auto; color: var(--ruby-text); }
+.menu-item.danger .ic { color: var(--ruby-text); }
+.menu-sep { height: 1px; background: var(--border); margin: 4px 2px; }
+.menu-label { padding: 6px 10px 4px; font-size: 11px; line-height: 16px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.menu-confirm { padding: 10px 10px 8px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 18px; color: var(--text-primary); }
+.menu-confirm p { margin: 0; }
+.menu-confirm .sub { color: var(--text-muted); font-size: 12px; line-height: 16px; }
+.menu-confirm .row { display: flex; gap: 8px; }
+
+.palette-backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.55); display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px 16px; }
+.palette { width: 100%; max-width: 560px; background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: 12px; box-shadow: var(--shadow-float); overflow: hidden; display: flex; flex-direction: column; max-height: 70vh; }
+.palette-input { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 48px; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+.palette-input input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--text-primary); font-size: 15px; }
+.palette-input input::placeholder { color: var(--text-muted); }
+.palette-input input:focus-visible { outline: none; }
+.palette-input input::-webkit-search-cancel-button { display: none; }
+.palette-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
+.palette-item { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.palette-item .ic { color: var(--text-muted); }
+.palette-item .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.palette-item .w { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+.palette-item[aria-selected="true"] { background: var(--bg-active); }
+.palette-empty { padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+.toasts { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 90; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: calc(100vw - 32px); }
+.toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: var(--bg-raised); border: 1px solid var(--border-strong); box-shadow: var(--shadow-float); font-size: 13px; line-height: 18px; color: var(--text-primary); max-width: 380px; }
+.toast .ic { color: var(--up); }
+.toast.error .ic { color: var(--down); }
+
+/* ---------- Pages: settings, artifacts ---------- */
+.page { max-width: 640px; margin: 0 auto; padding: 32px 24px 48px; display: flex; flex-direction: column; gap: 16px; }
+.page-title { margin: 0 0 4px; font-size: 18px; line-height: 24px; font-weight: 600; }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { margin: 0; font-size: 16px; line-height: 22px; font-weight: 600; }
+.card p { margin: 0; color: var(--text-secondary); font-size: 13px; line-height: 19px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 16px; color: var(--text-secondary); }
+.field-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.text-input { flex: 1; min-width: 160px; height: 36px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-app); color: var(--text-primary); font-size: 14px; }
+.text-input:hover { border-color: var(--border-strong); }
+.text-input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
+.radio-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.radio-card { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-app); cursor: pointer; transition: border-color 140ms var(--ease), background-color 140ms var(--ease); }
+.radio-card:hover { border-color: var(--border-strong); }
+.radio-card input { position: absolute; opacity: 0; pointer-events: none; }
+.radio-card .rt { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.radio-card .rd { font-size: 12px; line-height: 16px; color: var(--text-secondary); }
+.radio-card:has(input:checked) { border-color: var(--ruby-border); background: var(--ruby-tint); }
+.radio-card:has(input:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.soon-wrap { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 32px 24px; }
+.soon-ic { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; background: var(--bg-surface); border: 1px solid var(--border); color: var(--ruby-text); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1279px) { :root { --sidebar-w: 248px; } }
+@media (max-width: 767px) {
+  :root { --sidebar-w: min(86vw, 300px); }
+  .sidebar {
+    position: fixed; top: 0; bottom: 0; left: 0; transform: translateX(-100%); visibility: hidden; box-shadow: none;
+    transition: transform 180ms var(--ease), visibility 0s linear 180ms;
+  }
+  body.sb-collapsed .sidebar { margin-left: 0; }
+  body.drawer-open .sidebar { transform: translateX(0); visibility: visible; box-shadow: var(--shadow-float); transition: transform 180ms var(--ease), visibility 0s linear 0s; }
+  .scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, 0.55); opacity: 0; pointer-events: none; transition: opacity 180ms var(--ease); }
+  body.drawer-open .scrim { opacity: 1; pointer-events: auto; }
+  .hdr-open, body.sb-collapsed .hdr-open { display: inline-grid; }
+  .hdr-new { display: inline-grid; }
+  .chat-header { padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); gap: 4px; }
+  .crumb-ws, .crumb-sep { display: none; }
+  .agent-badge .badge-txt { display: none; }
+  .agent-badge { padding: 0 7px; }
+  .sym-chip { display: none; }
+  .sb-row kbd { display: none; }
+  .col { padding: 16px 16px 24px; }
+  .empty, .topic { padding: 24px 16px; }
+  .agent-row { gap: 8px; flex-wrap: nowrap; }
+  .agent-tile { width: auto; flex: 1 1 0; min-width: 0; padding: 10px 4px 9px; gap: 6px; }
+  .agent-tile svg.art { width: 40px; height: 40px; }
+  .agent-tile .lbl { font-size: 11px; line-height: 14px; }
+  .agent-tile .soon { font-size: 10px; }
+  .empty-title, .topic-title { font-size: 20px; line-height: 26px; }
+  .chips { grid-template-columns: 1fr; }
+  .dock { padding: 6px 12px 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .composer textarea { font-size: 16px; padding: 12px 14px 4px; }
+  .symbol { width: 104px; font-size: 16px; }
+  .palette-input input, .text-input, .rename-input, .crumb-input { font-size: 16px; }
+  .bubble { max-width: 88%; }
+  .radio-cards { grid-template-columns: 1fr; }
+  .pf-actions .btn { flex: 1 1 auto; }
+  .chat-more { opacity: 1; }
+  .row-dot { right: 32px; }
+  .toasts { left: 16px; right: 16px; align-items: center; }
+}
+@media (hover: none) { .chat-more { opacity: 1; } .row-dot { right: 32px; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .dots i { opacity: 0.7; }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+    <div class="sb-head">
+      <a class="brand" href="#" id="brandLink" aria-label="Aura home">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect width="24" height="24" rx="6" fill="#9F1D35"/><path d="M13.2 4.5 7.5 13.1h4.1l-.9 6.4 5.8-8.7h-4.1l.8-6.3Z" fill="#FFFFFF"/></svg>
+        <span class="wordmark">Aura</span>
+      </a>
+      <button class="icon-btn" id="sbClose" type="button" aria-label="Close sidebar" title="Close sidebar"><span data-icon="panelClose"></span></button>
+    </div>
+    <nav class="sb-actions" aria-label="Primary">
+      <button class="sb-row" id="newChatBtn" type="button" data-nav><span data-icon="squarePen"></span><span>New chat</span><kbd id="kbdNew"></kbd></button>
+      <button class="sb-row" id="searchBtn" type="button" data-nav aria-haspopup="dialog"><span data-icon="search"></span><span>Search</span><kbd id="kbdSearch"></kbd></button>
+      <button class="sb-row" id="artifactsBtn" type="button" data-nav><span data-icon="files"></span><span>Artifacts</span></button>
+    </nav>
+    <div class="sb-scroll" id="sbScroll">
+      <div class="sb-label" id="wsLabel">Workspaces</div>
+      <div id="groups" aria-labelledby="wsLabel"></div>
+    </div>
+    <div class="profile">
+      <div class="avatar" id="avatar" aria-hidden="true">IN</div>
+      <div class="profile-name"><span class="n" id="profileName">Investor</span><span class="pill ruby">Pro</span></div>
+      <button class="icon-btn" id="gearBtn" type="button" aria-label="Settings menu" title="Settings" aria-haspopup="menu" aria-expanded="false"><span data-icon="settings"></span></button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+  <main class="main" id="main">
+    <header class="chat-header">
+      <button class="icon-btn hdr-open" id="hdrOpen" type="button" aria-label="Open sidebar" title="Open sidebar" aria-controls="sidebar" aria-expanded="false"><span data-icon="panelOpen"></span></button>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="hdr-right" id="hdrRight"></div>
+      <button class="icon-btn hdr-new" id="hdrNew" type="button" aria-label="New chat" title="New chat"><span data-icon="squarePen"></span></button>
+    </header>
+
+    <div class="view" id="view" tabindex="-1"></div>
+
+    <div class="dock" id="dock">
+      <div class="dock-inner">
+        <div class="setup-note" id="setupNote" role="status" hidden></div>
+        <form class="composer" id="composer" autocomplete="off" novalidate>
+          <label class="sr-only" for="input">Message</label>
+          <textarea id="input" rows="1" placeholder="Ask the Trading agent…" enterkeyhint="send" spellcheck="true"></textarea>
+          <div class="composer-bar">
+            <button type="button" class="asset-btn" id="assetBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Asset class: none">
+              <span id="assetIcon"></span><span id="assetLabel">Assets</span><span data-icon="chevDown" data-size="14" data-class="chev"></span>
+            </button>
+            <input id="symbol" class="symbol" type="text" maxlength="20" spellcheck="false" autocapitalize="characters" autocomplete="off" placeholder="Symbol" aria-label="Symbol, optional" list="symbolList">
+            <datalist id="symbolList"></datalist>
+            <span class="grow"></span>
+            <button type="submit" class="send" id="sendBtn" aria-label="Send message" title="Send (Enter)" disabled></button>
+          </div>
+        </form>
+        <p class="disclaimer">Aura shares market analysis for information only. It is not investment advice.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="palette-backdrop" id="palette" hidden>
+  <div class="palette" role="dialog" aria-modal="true" aria-label="Search chats">
+    <div class="palette-input">
+      <span data-icon="search"></span>
+      <input id="paletteInput" type="search" placeholder="Search chats" aria-label="Search chats" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="paletteList" aria-autocomplete="list">
+      <kbd>Esc</kbd>
+    </div>
+    <ul class="palette-list" id="paletteList" role="listbox" aria-label="Chats"></ul>
+  </div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="sr-only" id="srLive" aria-live="polite"></div>
+
+<script>
+const AURA_CONFIG = window.__AURA_CONFIG__ || { webhooks: { main: null, trading: 'https://romashsqqq.app.n8n.cloud/webhook/c42e8eba-b246-40b8-bc07-8d41856046e0/chat', horizon: null, portfolio: null } };
+
+(function () {
+  'use strict';
+
+  /* ================= Constants ================= */
+  const STORE_KEY = 'aura.v1.state';
+  const PF_SESSION_KEY = 'aura.v1.portfolioSessionId';
+  const PINNED_ID = 'portfolio-pinned';
+  const SLOW_AFTER_MS = 45000;
+  const TIMEOUT_MS = 180000;
+  const GROUP_LIMIT = 8;
+
+  const ICONS = {
+    squarePen: '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    files: '<path d="M20 7h-3a2 2 0 0 1-2-2V2"/><path d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"/><path d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"/>',
+    settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+    panelClose: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/>',
+    panelOpen: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/>',
+    plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    chevDown: '<path d="m6 9 6 6 6-6"/>',
+    chevRight: '<path d="m9 18 6-6-6-6"/>',
+    ellipsis: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+    zapFill: '<path fill="currentColor" stroke="none" d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+    rotate: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+    bitcoin: '<path d="M11.767 19.089c4.924.868 6.14-6.025 1.216-6.894m-1.216 6.894L5.86 18.047m5.908 1.042-.347 1.97m1.563-8.864c4.924.869 6.14-6.025 1.215-6.893m-1.215 6.893-3.94-.694m5.155-6.2L8.29 4.26m5.908 1.042.348-1.97M7.48 20.364l3.126-17.727"/>',
+    chartLine: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
+    layers: '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
+    coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>',
+    grid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+    candles: '<path d="M9 5v4"/><rect width="4" height="6" x="7" y="9" rx="1"/><path d="M9 15v2"/><path d="M17 3v2"/><rect width="4" height="8" x="15" y="5" rx="1"/><path d="M17 13v3"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/>',
+    compass: '<path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/><circle cx="12" cy="12" r="10"/>',
+    shieldBars: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M9 15v-2"/><path d="M12 15v-4"/><path d="M15 15v-6"/>',
+    scale: '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+    chartPie: '<path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"/><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>',
+    message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    fileText: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+    landmark: '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/>',
+    shieldCheck: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    gauge: '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    hourglass: '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+    arrowUpRight: '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
+    eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+    trendUp: '<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>'
+  };
+
+  const WS = {
+    main: {
+      label: 'Main', short: 'Main', agent: 'Main agent', icon: 'compass',
+      desc: 'Your home base: market overview, concepts, and where to dig deeper.',
+      prompts: ['What moved markets in the last 24 hours?', 'How do Fed rate decisions affect crypto?', 'Compare Bitcoin and gold as hedges', 'Which workspace should I use for a long-term idea?']
+    },
+    trading: {
+      label: 'Trading', short: 'Trading', agent: 'Trading agent', icon: 'candles',
+      desc: 'Short-term setups from live candles, order books and positioning.',
+      prompts: ['Key levels for BTC/USDT on the 1h chart', "Is NVDA's volume today unusual?", 'Funding and open interest check for ETH', 'Gold: breakout or fake-out this week?']
+    },
+    horizon: {
+      label: 'Long-term Investing', short: 'Long-term', agent: 'Long-term agent', icon: 'shieldBars',
+      desc: 'Long-term theses from filings, insiders and megatrends.',
+      prompts: ['Build a 2030 thesis for NVDA', "How healthy are Tesla's financials?", 'Are insiders buying any big tech names?', 'Ethereum as a 2030 holding: bull and bear case']
+    },
+    portfolio: {
+      label: 'Macro & Portfolio', short: 'Macro & Portfolio', agent: 'Portfolio agent', icon: 'scale',
+      desc: 'Your crypto and stock portfolio against the macro regime.',
+      prompts: ["Review my portfolio against today's macro regime", 'Am I too concentrated anywhere?', 'Which macro events this week matter for my holdings?', 'Suggest a rebalancing plan for my risk profile']
+    }
+  };
+  const WS_ORDER = ['main', 'trading', 'horizon', 'portfolio'];
+
+  const ASSETS = {
+    crypto: { label: 'Crypto', icon: 'bitcoin', ph: 'BTCUSDT', list: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'DOGEUSDT', 'ADAUSDT'] },
+    stocks: { label: 'Stocks', icon: 'chartLine', ph: 'NVDA', list: ['NVDA', 'AAPL', 'MSFT', 'TSLA', 'AMZN', 'META', 'GOOGL', 'AMD'] },
+    indices: { label: 'Indices', icon: 'layers', ph: '^GSPC', list: ['^GSPC', '^NDX', '^DJI', '^VIX', 'SPY', 'QQQ'] },
+    gold: { label: 'Gold', icon: 'coins', ph: 'GC=F', list: ['GC=F', 'XAUUSD', 'GLD'] }
+  };
+  const ASSET_ORDER = ['crypto', 'stocks', 'indices', 'gold'];
+
+  const RISK = {
+    conservative: { label: 'Conservative', desc: 'Protect capital first. Small positions, low leverage.' },
+    balanced: { label: 'Balanced', desc: 'Steady growth with measured drawdowns.' },
+    aggressive: { label: 'Aggressive', desc: 'Higher volatility for higher upside.' }
+  };
+
+  const PF_PROMPTS = {
+    show: 'Show my live portfolio: every holding with its live price, value, weight and P&L, plus the portfolio totals.',
+    review: 'Run a full portfolio review: allocation by asset class, concentration and risk flags, how my holdings fit the current macro regime, and concrete rebalancing ideas.',
+    add: 'Add 0.35 BTC at 52000 and 40 NVDA at 92'
+  };
+
+  // [title, starter prompt, asset class, symbol, sidebar icon]
+  const SEEDS = {
+    main: [
+      ['What moved markets today', 'What moved markets in the last 24 hours across crypto, stocks, indices and gold? Give me the top drivers and the numbers behind them.', null, '', 'message'],
+      ['Crypto vs stocks basics', 'Explain the basics of investing in crypto versus stocks: risk, volatility, custody, and how to size each in a portfolio.', null, '', 'message']
+    ],
+    trading: [
+      ['BTC Scalping Signals', 'Give me 5m/15m scalping levels for BTCUSDT with order flow and funding.', 'crypto', 'BTCUSDT', 'candles'],
+      ['NASDAQ Order Book Analysis', 'Read the Nasdaq 100 intraday structure: key levels, volume and momentum, and whether buyers or sellers are in control right now.', 'indices', '^NDX', 'candles'],
+      ['Gold Volatility Play', 'Is gold set up for a volatility expansion this week? Give me the current range, breakout levels and invalidation for GC=F.', 'gold', 'GC=F', 'candles'],
+      ['Leverage Risk Check', 'Check leverage risk for BTCUSDT: funding rates, open interest changes and the long/short ratio. Where are liquidations likely to cluster?', 'crypto', 'BTCUSDT', 'candles']
+    ],
+    horizon: [
+      ['TSLA 2030 Thesis', 'Build a 2030 thesis for Tesla (TSLA): bull, base and bear cases with the fundamentals that drive each one.', 'stocks', 'TSLA', 'fileText'],
+      ['AI Sector Growth', 'Which AI sector leaders have the strongest long-term growth profile? Compare revenue growth, margins and moats.', 'stocks', '', 'trendUp'],
+      ['ETF Dividend Portfolio', 'Design a long-term dividend ETF portfolio: compare yield, dividend growth and expense ratios for the main candidates.', 'stocks', '', 'fileText'],
+      ['Nvidia Q3 Analysis', "Analyze Nvidia's (NVDA) latest quarterly results: revenue mix, margins, guidance, and what it means for a multi-year hold.", 'stocks', 'NVDA', 'fileText']
+    ],
+    portfolio: [
+      ['FED Rate Hike Impact', 'How would another Fed rate hike affect my holdings? Walk through rates, the dollar, equities, crypto and gold.', null, '', 'landmark'],
+      ['Global Inflation Update', 'Give me a global inflation update: the latest CPI trends in the US, the Eurozone and the UK, and what they mean for my portfolio.', null, '', 'landmark'],
+      ['Portfolio Rebalancing', 'Suggest a rebalancing plan for my portfolio based on my risk profile and the current macro regime.', null, '', 'shieldCheck'],
+      ['Risk Exposure Report', 'Build a risk exposure report for my portfolio: concentration, correlation, drawdown risk and the biggest single points of failure.', null, '', 'shieldCheck']
+    ]
+  };
+
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+
+  /* ================= Helpers ================= */
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+  const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESC_MAP[c]);
+  function rid() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) { /* ignore */ }
+    return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+  }
+  const uid = (p) => p + '_' + rid().replace(/-/g, '').slice(0, 16);
+  const newSession = (ws) => 'aura-' + ws + '-' + rid();
+  function icon(name, size, cls) {
+    const s = size || 16;
+    return '<svg class="ic' + (cls ? ' ' + cls : '') + '" width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + (ICONS[name] || '') + '</svg>';
+  }
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function fmtTime(ts) { const d = new Date(ts); return MONTHS[d.getMonth()] + ' ' + d.getDate() + ', ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+  function fmtElapsed(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return Math.floor(s / 60) + ':' + pad2(s % 60); }
+  function makeTitle(text) {
+    const t = String(text).replace(/\s+/g, ' ').trim();
+    if (t.length <= 40) return t || 'New chat';
+    let cut = t.slice(0, 40);
+    const sp = cut.lastIndexOf(' ');
+    if (sp > 24) cut = cut.slice(0, sp);
+    return cut.replace(/[\s,.;:!?-]+$/, '') + '…';
+  }
+  function initials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'IN';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  function cleanSymbol(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9^=.\-/:_]/g, '').slice(0, 20); }
+
+  /* ================= Illustrated agent icons ================= */
+  function art(ws) {
+    const open = '<svg class="art" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false">';
+    if (ws === 'trading') {
+      return open +
+        '<g stroke="var(--a-line)" stroke-width="2" stroke-linecap="round">' +
+        '<path d="M14 30v26"/><path d="M32 24v32"/><path d="M50 14v30"/></g>' +
+        '<rect x="9" y="36" width="10" height="14" rx="2" fill="var(--a-surface)" stroke="var(--a-line)" stroke-width="2"/>' +
+        '<rect x="27" y="31" width="10" height="18" rx="2" fill="var(--a-fill)" stroke="var(--a-line)" stroke-width="2"/>' +
+        '<rect x="45" y="20" width="10" height="18" rx="2" fill="var(--a-fill)" stroke="var(--a-line)" stroke-width="2"/>' +
+        '<path d="M8 59h48" stroke="var(--a-line)" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M34.5 3 20 25.5h9.5L25.5 43 41 19h-9.8L35.5 3Z" fill="var(--a-hi)" stroke="var(--a-cut)" stroke-width="3" stroke-linejoin="round" paint-order="stroke"/>' +
+        '</svg>';
+    }
+    if (ws === 'horizon') {
+      return open +
+        '<path d="M28 5 47 11.5v15.5c0 13-8.3 21.7-19 26.5C17.3 48.7 9 40 9 27V11.5Z" fill="var(--a-surface)" stroke="var(--a-line)" stroke-width="2" stroke-linejoin="round"/>' +
+        '<rect x="16" y="31" width="6" height="11" rx="1.5" fill="var(--a-fill)"/>' +
+        '<rect x="25" y="25" width="6" height="17" rx="1.5" fill="var(--a-fill)"/>' +
+        '<rect x="34" y="18" width="6" height="24" rx="1.5" fill="var(--a-accent)"/>' +
+        '<circle cx="47" cy="47" r="12" fill="var(--a-gold)" stroke="var(--a-cut)" stroke-width="3" paint-order="stroke"/>' +
+        '<circle cx="47" cy="47" r="8.5" fill="none" stroke="var(--a-cut)" stroke-opacity=".35" stroke-width="1.5"/>' +
+        '<g transform="translate(40.4 40.4) scale(0.55)" fill="none" stroke="var(--a-cut)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></g>' +
+        '</svg>';
+    }
+    if (ws === 'portfolio') {
+      return open +
+        '<path d="M32 12v40" stroke="var(--a-line)" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<path d="M23 57h18l-3.5-5h-11Z" fill="var(--a-fill)" stroke="var(--a-line)" stroke-width="2" stroke-linejoin="round"/>' +
+        '<path d="M10 17h44" stroke="var(--a-line)" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<g stroke="var(--a-line)" stroke-width="1.5" stroke-linecap="round" stroke-opacity=".8"><path d="M12 17 5 38"/><path d="M12 17l7 21"/><path d="M52 17l-7 21"/><path d="M52 17l7 21"/></g>' +
+        '<circle cx="32" cy="12" r="3.5" fill="var(--a-fill)" stroke="var(--a-line)" stroke-width="2"/>' +
+        '<circle cx="12" cy="30.5" r="7.5" fill="var(--a-surface)" stroke="var(--a-hi)" stroke-width="1.75"/>' +
+        '<ellipse cx="12" cy="30.5" rx="3.2" ry="7.5" stroke="var(--a-hi)" stroke-width="1.25"/>' +
+        '<path d="M4.5 30.5h15M6 26.5h12M6 34.5h12" stroke="var(--a-hi)" stroke-width="1.25"/>' +
+        '<path d="M2.5 38h19c-1 4.6-4.6 7-9.5 7s-8.5-2.4-9.5-7Z" fill="var(--a-fill)" stroke="var(--a-line)" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<path d="M44.5 37.2 47 30.5h10l2.5 6.7Z" fill="var(--a-gold)" stroke="var(--a-cut)" stroke-width="1" stroke-linejoin="round"/>' +
+        '<path d="M47.5 33.5h9" stroke="var(--a-cut)" stroke-opacity=".35" stroke-width="1"/>' +
+        '<path d="M42.5 38h19c-1 4.6-4.6 7-9.5 7s-8.5-2.4-9.5-7Z" fill="var(--a-fill)" stroke="var(--a-line)" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '</svg>';
+    }
+    // main: compass
+    return open +
+      '<circle cx="32" cy="32" r="25" fill="var(--a-surface)" stroke="var(--a-line)" stroke-width="2"/>' +
+      '<circle cx="32" cy="32" r="18.5" stroke="var(--a-line)" stroke-opacity=".4" stroke-width="1.5" stroke-dasharray="1.5 4" stroke-linecap="round"/>' +
+      '<path d="M32 7.5v5M32 51.5v5M7.5 32h5M51.5 32h5" stroke="var(--a-line)" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M44 20 35.2 35.2 28.8 28.8Z" fill="var(--a-accent)"/>' +
+      '<path d="M20 44 28.8 28.8 35.2 35.2Z" fill="var(--a-hi)"/>' +
+      '<circle cx="32" cy="32" r="2.6" fill="var(--a-cut)"/>' +
+      '</svg>';
+  }
+
+  /* ================= Config ================= */
+  function webhookFor(ws) {
+    const hooks = (AURA_CONFIG && typeof AURA_CONFIG === 'object' && AURA_CONFIG.webhooks) || {};
+    const v = hooks[ws];
+    return typeof v === 'string' && v.trim() ? v.trim() : null;
+  }
+  const agentReady = (ws) => !!webhookFor(ws);
+  const firstReadyWs = () => WS_ORDER.find(agentReady) || 'trading';
+  const defaultWs = () => (agentReady('main') ? 'main' : firstReadyWs());
+
+  /* ================= Storage ================= */
+  let memPfSession = null;
+  function portfolioSessionId() {
+    try {
+      let id = localStorage.getItem(PF_SESSION_KEY);
+      if (!id) { id = 'aura-portfolio-' + rid(); localStorage.setItem(PF_SESSION_KEY, id); }
+      return id;
+    } catch (e) {
+      if (!memPfSession) memPfSession = 'aura-portfolio-' + rid();
+      return memPfSession;
+    }
+  }
+
+  function seedState() {
+    const now = Date.now();
+    const chats = [{ id: PINNED_ID, ws: 'portfolio', title: 'Portfolio chat', pinned: true, starter: null, icon: 'pin', ctx: { asset: null, symbol: '' }, sessionId: null, createdAt: now, updatedAt: now, fresh: false, unread: false }];
+    let k = 0;
+    WS_ORDER.forEach((ws) => {
+      SEEDS[ws].forEach((s) => {
+        k += 1;
+        const t = now - k * 60000;
+        chats.push({ id: uid('c'), ws, title: s[0], starter: s[1], icon: s[4], ctx: { asset: s[2], symbol: s[3] }, sessionId: newSession(ws), pinned: false, createdAt: t, updatedAt: t, fresh: false, unread: false });
+      });
+    });
+    return { v: 1, chats, messages: {}, collapsed: {}, showAll: {}, selected: null, draft: { ws: defaultWs(), asset: null, symbol: '' }, profile: { name: 'Investor', risk: null }, sbCollapsed: false };
+  }
+
+  function normalize(s) {
+    if (!s || typeof s !== 'object' || s.v !== 1 || !Array.isArray(s.chats)) return seedState();
+    s.chats = s.chats.filter((c) => c && typeof c.id === 'string' && WS[c.ws]);
+    s.chats.forEach((c) => {
+      c.title = typeof c.title === 'string' && c.title ? c.title : 'New chat';
+      c.ctx = c.ctx && typeof c.ctx === 'object' ? c.ctx : { asset: null, symbol: '' };
+      if (c.ctx.asset && !ASSETS[c.ctx.asset]) c.ctx.asset = null;
+      c.ctx.symbol = cleanSymbol(c.ctx.symbol);
+      if (!c.pinned && !c.sessionId) c.sessionId = newSession(c.ws);
+      c.updatedAt = Number(c.updatedAt) || Date.now();
+    });
+    if (!s.chats.some((c) => c.id === PINNED_ID)) {
+      s.chats.unshift({ id: PINNED_ID, ws: 'portfolio', title: 'Portfolio chat', pinned: true, starter: null, icon: 'pin', ctx: { asset: null, symbol: '' }, sessionId: null, createdAt: Date.now(), updatedAt: Date.now(), fresh: false, unread: false });
+    }
+    s.messages = s.messages && typeof s.messages === 'object' ? s.messages : {};
+    Object.keys(s.messages).forEach((id) => { if (!s.chats.some((c) => c.id === id) || !Array.isArray(s.messages[id])) delete s.messages[id]; });
+    s.collapsed = s.collapsed && typeof s.collapsed === 'object' ? s.collapsed : {};
+    s.showAll = s.showAll && typeof s.showAll === 'object' ? s.showAll : {};
+    s.draft = s.draft && typeof s.draft === 'object' ? s.draft : { ws: defaultWs(), asset: null, symbol: '' };
+    if (!WS[s.draft.ws]) s.draft.ws = defaultWs();
+    if (s.draft.asset && !ASSETS[s.draft.asset]) s.draft.asset = null;
+    s.draft.symbol = cleanSymbol(s.draft.symbol);
+    s.profile = s.profile && typeof s.profile === 'object' ? s.profile : { name: 'Investor', risk: null };
+    if (!s.profile.name) s.profile.name = 'Investor';
+    if (s.profile.risk && !RISK[s.profile.risk]) s.profile.risk = null;
+    if (s.selected && !s.chats.some((c) => c.id === s.selected)) s.selected = null;
+    s.sbCollapsed = !!s.sbCollapsed;
+    return s;
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return seedState();
+      return normalize(JSON.parse(raw));
+    } catch (e) {
+      return seedState();
+    }
+  }
+
+  let state = loadState();
+  let view = 'chat'; // 'chat' | 'artifacts' | 'settings'
+  let saveTimer = null;
+  let saveWarned = false;
+  function saveNow() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    } catch (e) {
+      if (!saveWarned) {
+        saveWarned = true;
+        const blocked = e && (e.name === 'SecurityError' || /sandbox|denied|insecure/i.test(String(e.message)));
+        toast(blocked ? 'This browser view blocks storage, so chats reset when you reload.' : "Couldn't save chats on this device. Browser storage may be full.", 'error');
+      }
+    }
+  }
+  function save() { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 120); }
+
+  /* ================= Runtime state ================= */
+  const pending = new Map(); // chatId -> { start, ctrl }
+  const drafts = new Map();  // chatId|'home' -> text
+  const mdCache = new Map(); // messageId -> sanitized html
+  let tickTimer = null;
+
+  const chatById = (id) => state.chats.find((c) => c.id === id) || null;
+  const currentChat = () => (view === 'chat' && state.selected ? chatById(state.selected) : null);
+  const activeWs = () => { const c = currentChat(); return c ? c.ws : state.draft.ws; };
+  const msgsOf = (id) => state.messages[id] || [];
+  const sessionFor = (chat) => (chat.pinned ? portfolioSessionId() : chat.sessionId);
+  const isViewing = (id) => view === 'chat' && state.selected === id;
+  const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
+  const draftKey = () => (view === 'chat' && state.selected ? state.selected : 'home');
+
+  /* ================= DOM refs ================= */
+  const el = {
+    sidebar: $('#sidebar'), groups: $('#groups'), sbScroll: $('#sbScroll'), view: $('#view'), crumbs: $('#crumbs'), hdrRight: $('#hdrRight'),
+    input: $('#input'), symbol: $('#symbol'), symbolList: $('#symbolList'), assetBtn: $('#assetBtn'), assetIcon: $('#assetIcon'), assetLabel: $('#assetLabel'),
+    sendBtn: $('#sendBtn'), composer: $('#composer'), dock: $('#dock'), setupNote: $('#setupNote'), palette: $('#palette'), paletteInput: $('#paletteInput'),
+    paletteList: $('#paletteList'), toasts: $('#toasts'), srLive: $('#srLive'), hdrOpen: $('#hdrOpen'), scrim: $('#scrim'), gearBtn: $('#gearBtn'),
+    avatar: $('#avatar'), profileName: $('#profileName'), artifactsBtn: $('#artifactsBtn')
+  };
+
+  function hydrateIcons(root) {
+    $$('[data-icon]', root).forEach((n) => {
+      const tmp = document.createElement('span');
+      tmp.innerHTML = icon(n.getAttribute('data-icon'), Number(n.getAttribute('data-size')) || 16, n.getAttribute('data-class') || '');
+      n.replaceWith(tmp.firstChild);
+    });
+  }
+
+  /* ================= Markdown ================= */
+  function inlineMd(s) { // s is already HTML-escaped
+    return s
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+      .replace(/(^|[\s(])\*([^*\s][^*]*?)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>');
+  }
+  // Fallback renderer used only if marked/DOMPurify failed to load. Escapes everything first, so it is safe by construction.
+  function miniMarkdown(src) {
+    const lines = String(src).replace(/\r\n?/g, '\n').split('\n');
+    const out = [];
+    let para = [];
+    let i = 0;
+    const flush = () => { if (para.length) { out.push('<p>' + para.map((l) => inlineMd(esc(l))).join('<br>') + '</p>'); para = []; } };
+    const isRow = (l) => /^\s*\|.*\|\s*$/.test(l);
+    const isSep = (l) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l);
+    const cells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    while (i < lines.length) {
+      const l = lines[i];
+      let m;
+      if (/^\s*```/.test(l)) {
+        flush(); const buf = []; i += 1;
+        while (i < lines.length && !/^\s*```/.test(lines[i])) { buf.push(lines[i]); i += 1; }
+        i += 1; out.push('<pre><code>' + esc(buf.join('\n')) + '</code></pre>'); continue;
+      }
+      if (isRow(l) && i + 1 < lines.length && isSep(lines[i + 1])) {
+        flush(); const head = cells(l); i += 2; const rows = [];
+        while (i < lines.length && isRow(lines[i])) { rows.push(cells(lines[i])); i += 1; }
+        out.push('<table><thead><tr>' + head.map((c) => '<th>' + inlineMd(esc(c)) + '</th>').join('') + '</tr></thead><tbody>' +
+          rows.map((r) => '<tr>' + r.map((c) => '<td>' + inlineMd(esc(c)) + '</td>').join('') + '</tr>').join('') + '</tbody></table>');
+        continue;
+      }
+      if ((m = /^\s*#{1,6}\s+(.*)$/.exec(l))) { flush(); out.push('<h3>' + inlineMd(esc(m[1])) + '</h3>'); i += 1; continue; }
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { flush(); out.push('<hr>'); i += 1; continue; }
+      if (/^\s*[-*+]\s+/.test(l)) {
+        flush(); const items = [];
+        while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*[-*+]\s+/, '')); i += 1; }
+        out.push('<ul>' + items.map((t) => '<li>' + inlineMd(esc(t)) + '</li>').join('') + '</ul>'); continue;
+      }
+      if (/^\s*\d+[.)]\s+/.test(l)) {
+        flush(); const items = [];
+        while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) { items.push(lines[i].replace(/^\s*\d+[.)]\s+/, '')); i += 1; }
+        out.push('<ol>' + items.map((t) => '<li>' + inlineMd(esc(t)) + '</li>').join('') + '</ol>'); continue;
+      }
+      if (/^\s*>\s?/.test(l)) {
+        flush(); const q = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) { q.push(lines[i].replace(/^\s*>\s?/, '')); i += 1; }
+        out.push('<blockquote><p>' + q.map((t) => inlineMd(esc(t))).join('<br>') + '</p></blockquote>'); continue;
+      }
+      if (!l.trim()) { flush(); i += 1; continue; }
+      para.push(l); i += 1;
+    }
+    flush();
+    return out.join('');
+  }
+
+  let purifyHooked = false;
+  function markdownToSafeHtml(md) {
+    const hasLibs = window.marked && typeof window.marked.parse === 'function' && window.DOMPurify && typeof window.DOMPurify.sanitize === 'function';
+    if (hasLibs) {
+      if (!purifyHooked) {
+        purifyHooked = true;
+        try {
+          window.DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+            if (node.tagName === 'A' && node.getAttribute('href')) { node.setAttribute('target', '_blank'); node.setAttribute('rel', 'noopener noreferrer'); }
+          });
+        } catch (e) { /* ignore */ }
+      }
+      try {
+        const raw = window.marked.parse(String(md), { gfm: true, breaks: false, async: false });
+        return window.DOMPurify.sanitize(String(raw), { USE_PROFILES: { html: true }, FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select'] });
+      } catch (e) { /* fall through to the escaped renderer */ }
+    }
+    const html = miniMarkdown(md);
+    return window.DOMPurify && typeof window.DOMPurify.sanitize === 'function' ? window.DOMPurify.sanitize(html) : html;
+  }
+
+  const NUM_RE = /^[+\-−±~≈]?\s?[$€£]?\s?\d[\d,]*(\.\d+)?\s?(%|[kKmMbBtT]|x|bps?|pp)?(\s?(USD|USDT|EUR|BTC|ETH))?$/;
+  function decorateMd(host) {
+    $$('table', host).forEach((t) => {
+      if (!t.parentElement.classList.contains('table-wrap')) {
+        const wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        t.parentNode.insertBefore(wrap, t);
+        wrap.appendChild(t);
+      }
+      const rows = Array.from(t.rows);
+      if (!rows.length) return;
+      const cols = Math.max.apply(null, rows.map((r) => r.cells.length));
+      for (let c = 0; c < cols; c += 1) {
+        let n = 0; let num = 0;
+        rows.forEach((r) => {
+          const cell = r.cells[c];
+          if (!cell || cell.tagName === 'TH') return;
+          const tx = cell.textContent.trim().replace(/\s+/g, ' ');
+          if (!tx || /^(—|-|–|n\/a|na)$/i.test(tx)) return;
+          n += 1;
+          if (NUM_RE.test(tx)) num += 1;
+        });
+        if (n && num / n >= 0.6) {
+          rows.forEach((r) => {
+            const cell = r.cells[c];
+            if (!cell) return;
+            cell.classList.add('num');
+            if (cell.tagName === 'TD') {
+              const tx = cell.textContent.trim();
+              if (/^\+\s?[$€£]?\d/.test(tx)) cell.classList.add('up');
+              else if (/^[-−]\s?[$€£]?\d/.test(tx)) cell.classList.add('down');
+            }
+          });
+        }
+      }
+    });
+  }
+
+  /* ================= Sidebar ================= */
+  function sortedChats(ws) {
+    return state.chats.filter((c) => c.ws === ws).sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return b.updatedAt - a.updatedAt;
+    });
+  }
+  function rowIcon(c) {
+    if (c.icon && ICONS[c.icon]) return c.icon;
+    if (c.ws === 'trading' && c.ctx && c.ctx.symbol) return 'candles';
+    return 'message';
+  }
+  let renaming = null; // 'sidebar' | 'header' while an inline rename input is open
+  function renderSidebar() {
+    if (renaming === 'sidebar') return;
+    const parts = [];
+    WS_ORDER.forEach((ws) => {
+      const w = WS[ws];
+      const collapsed = !!state.collapsed[ws];
+      const chats = sortedChats(ws);
+      const showAll = !!state.showAll[ws];
+      const visible = showAll ? chats : chats.slice(0, GROUP_LIMIT);
+      parts.push('<section class="grp' + (collapsed ? ' collapsed' : '') + '" data-ws="' + ws + '">');
+      parts.push('<div class="grp-head"><button type="button" class="grp-toggle" data-act="toggle-group" data-ws="' + ws + '" data-nav aria-expanded="' + (!collapsed) + '" aria-controls="list-' + ws + '">' +
+        icon('chevDown', 14, 'chev') + '<span class="name">' + esc(w.label) + '</span></button>' +
+        '<button type="button" class="grp-add" data-act="add-chat" data-ws="' + ws + '" aria-label="New chat in ' + esc(w.label) + '" title="New chat in ' + esc(w.label) + '">' + icon('plus', 14) + '</button></div>');
+      parts.push('<ul class="chat-list" id="list-' + ws + '"' + (collapsed ? ' hidden' : '') + '>');
+      visible.forEach((c) => {
+        const active = view === 'chat' && state.selected === c.id;
+        const busy = pending.has(c.id);
+        const cls = 'chat-row' + (active ? ' active' : '') + (c.pinned ? ' pinned' : '');
+        let inner;
+        if (c.pinned) {
+          inner = icon('pin', 14, 'pin-ic') + '<span class="t">' + esc(c.title) + '</span>' + icon('chartPie', 14, 'end-ic');
+        } else {
+          inner = icon(rowIcon(c), 14, 'ctx-ic') + '<span class="t">' + esc(c.title) + '</span>';
+        }
+        parts.push('<li class="' + cls + '" data-id="' + esc(c.id) + '">' +
+          '<button type="button" class="chat-link" data-act="open-chat" data-id="' + esc(c.id) + '" data-nav' + (active ? ' aria-current="page"' : '') + ' title="' + esc(c.title) + '">' + inner + '</button>' +
+          (!c.pinned && (busy || c.unread) ? '<span class="row-dot' + (busy ? ' busy' : '') + '" aria-hidden="true"></span>' : '') +
+          (!c.pinned ? '<button type="button" class="chat-more" data-act="chat-menu" data-id="' + esc(c.id) + '" aria-haspopup="menu" aria-expanded="false" aria-label="Options for ' + esc(c.title) + '">' + icon('ellipsis', 16) + '</button>' : '') +
+          '</li>');
+      });
+      parts.push('</ul>');
+      if (!collapsed && chats.length > GROUP_LIMIT) {
+        parts.push('<button type="button" class="show-all" data-act="show-all" data-ws="' + ws + '" data-nav>' + (showAll ? 'Show less' : 'Show all (' + chats.length + ')') + '</button>');
+      }
+      parts.push('</section>');
+    });
+    el.groups.innerHTML = parts.join('');
+    el.artifactsBtn.classList.toggle('active', view === 'artifacts');
+    el.profileName.textContent = state.profile.name;
+    el.avatar.textContent = initials(state.profile.name);
+  }
+
+  /* ================= Header ================= */
+  function renderHeader() {
+    if (renaming === 'header') return;
+    const c = currentChat();
+    let crumbs = '';
+    let right = '';
+    if (view === 'artifacts') {
+      crumbs = '<span class="crumb-cur">Artifacts</span>';
+    } else if (view === 'settings') {
+      crumbs = '<span class="crumb-ws">Settings</span><span class="crumb-sep">/</span><span class="crumb-cur">Profile and risk</span>';
+    } else {
+      const ws = activeWs();
+      const w = WS[ws];
+      crumbs = '<span class="crumb-ws">' + esc(w.label) + '</span><span class="crumb-sep">/</span><span class="crumb-cur" id="crumbTitle">' + esc(c ? c.title : 'New chat') + '</span>';
+      const sym = c ? c.ctx.symbol : state.draft.symbol;
+      if (sym) right += '<span class="sym-chip" title="Symbol">' + esc(sym) + '</span>';
+      right += '<span class="agent-badge" title="' + esc(w.agent) + '">' + icon(w.icon, 14) + '<span class="badge-txt">' + esc(w.agent) + '</span></span>';
+      if (c && !c.pinned) right += '<button type="button" class="icon-btn" id="hdrMore" data-act="header-menu" aria-haspopup="menu" aria-expanded="false" aria-label="Chat options" title="Chat options">' + icon('ellipsis', 16) + '</button>';
+    }
+    el.crumbs.innerHTML = crumbs;
+    el.hdrRight.innerHTML = right;
+    document.title = (view === 'chat' && c ? c.title + ' · ' : '') + 'Aura Invest AI';
+  }
+
+  /* ================= Main views ================= */
+  function agentTiles(activeWsId) {
+    return '<div class="agent-row" role="group" aria-label="Choose an agent">' + WS_ORDER.map((ws) => {
+      const w = WS[ws];
+      const on = ws === activeWsId;
+      return '<button type="button" class="agent-tile' + (on ? ' active' : '') + '" data-act="pick-agent" data-ws="' + ws + '" aria-pressed="' + on + '" title="' + esc(w.agent) + '">' +
+        art(ws) + '<span class="lbl">' + esc(w.short) + '</span>' + (agentReady(ws) ? '' : '<span class="soon">Setting up</span>') + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function emptyStateHtml(ws) {
+    const w = WS[ws];
+    const ready = agentReady(ws);
+    return '<div class="empty">' + agentTiles(ws) +
+      '<h1 class="empty-title">' + esc(w.label) + '</h1>' +
+      '<p class="empty-desc">' + esc(w.desc) + (ready ? '' : ' This agent is being set up.') + '</p>' +
+      '<div class="chips">' + w.prompts.map((p) => '<button type="button" class="chip" data-act="chip" data-prompt="' + esc(p) + '"' + (ready ? '' : ' disabled') + '><span>' + esc(p) + '</span>' + icon('arrowUpRight', 14) + '</button>').join('') + '</div>' +
+      '</div>';
+  }
+
+  function ctxText(ctx) {
+    if (!ctx) return '';
+    const parts = [];
+    if (ctx.asset && ASSETS[ctx.asset]) parts.push(ASSETS[ctx.asset].label);
+    if (ctx.symbol) parts.push(ctx.symbol);
+    return parts.join(' · ');
+  }
+
+  function topicHtml(c) {
+    const w = WS[c.ws];
+    const ready = agentReady(c.ws);
+    const busy = pending.has(c.id);
+    const ct = ctxText(c.ctx);
+    return '<div class="topic">' +
+      '<div class="topic-art art-on">' + art(c.ws) + '</div>' +
+      '<div class="topic-meta">' + esc(w.label) + ' · ' + esc(w.agent) + '</div>' +
+      '<h1 class="topic-title">' + esc(c.title) + '</h1>' +
+      '<p class="empty-desc">' + esc(w.desc) + '</p>' +
+      '<div class="starter-card"><div class="starter-label">Starter prompt</div><p>' + esc(c.starter) + '</p>' +
+      (ct ? '<span class="ctx-tag">' + esc(ct) + '</span>' : '') + '</div>' +
+      '<div class="topic-actions"><button type="button" class="btn primary lg" data-act="start"' + (ready && !busy ? '' : ' disabled') + '>' + icon('zapFill', 16) + 'Start</button>' +
+      '<span class="hint">' + (ready ? 'or ask your own question below' : 'The ' + esc(w.agent) + ' is being set up') + '</span></div>' +
+      '</div>';
+  }
+
+  function portfolioPanelHtml(c) {
+    const ready = agentReady('portfolio');
+    const busy = pending.has(c.id);
+    const dis = ready && !busy ? '' : ' disabled';
+    return '<section class="pf-panel" aria-label="Portfolio quick actions">' +
+      '<div class="pf-head">' + icon('pin', 16) + '<div><h2>Portfolio chat</h2><p>Holdings you add here are saved by the Portfolio agent and linked to this device.</p></div></div>' +
+      '<div class="pf-actions">' +
+      '<button type="button" class="btn secondary" data-act="pf-show"' + dis + '>' + icon('chartPie', 16) + 'Show my live portfolio</button>' +
+      '<button type="button" class="btn primary" data-act="pf-review"' + dis + '>' + icon('shieldCheck', 16) + 'Run portfolio review</button>' +
+      '<button type="button" class="btn secondary" data-act="pf-add">' + icon('plus', 16) + 'Add holdings</button>' +
+      '</div>' +
+      (ready ? '' : '<div class="pf-note">The Portfolio agent is being set up. Quick actions will work as soon as it is live.</div>') +
+      '</section>';
+  }
+
+  function thinkingHtml(c) {
+    const p = pending.get(c.id);
+    const w = WS[c.ws];
+    const elapsed = p ? Date.now() - p.start : 0;
+    return '<div class="msg-ai" data-thinking="' + esc(c.id) + '" aria-live="off">' +
+      '<div class="thinking"><span class="ai-avatar">' + icon(w.icon, 14) + '</span>' +
+      '<span class="lbl">' + esc(thinkingLabel(c.ws, elapsed)) + '</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>' +
+      '<span class="elapsed">' + fmtElapsed(elapsed) + '</span></div></div>';
+  }
+  function thinkingLabel(ws, elapsed) {
+    return elapsed >= SLOW_AFTER_MS ? 'Still working… pulling more data' : WS[ws].agent + ' is analyzing live data…';
+  }
+
+  function messageHtml(c, m) {
+    if (m.role === 'user') {
+      return '<div class="msg-user" data-mid="' + esc(m.id) + '"><div class="bubble">' + esc(m.text) + '</div>' +
+        (m.ctx ? '<div class="msg-ctx">' + esc(m.ctx) + '</div>' : '') + '</div>';
+    }
+    const w = WS[m.ws || c.ws];
+    if (m.role === 'error') {
+      return '<div class="msg-ai" data-mid="' + esc(m.id) + '"><div class="err-card" role="alert">' + icon('alert', 16) +
+        '<div class="err-body"><div class="err-text">' + esc(m.text) + '</div>' +
+        (m.detail ? '<div class="err-detail">' + esc(m.detail) + '</div>' : '') +
+        (m.retry ? '<div><button type="button" class="btn secondary sm" data-act="retry" data-mid="' + esc(m.id) + '"' + (pending.has(c.id) ? ' disabled' : '') + '>' + icon('rotate', 14) + 'Retry</button></div>' : '') +
+        '</div></div></div>';
+    }
+    return '<div class="msg-ai" data-mid="' + esc(m.id) + '">' +
+      '<div class="ai-head"><span class="ai-avatar">' + icon(w.icon, 14) + '</span><span class="ai-meta"><b>' + esc(w.agent) + '</b> · ' + esc(fmtTime(m.ts)) + '</span></div>' +
+      '<div class="md" data-md="' + esc(m.id) + '"></div>' +
+      '<div class="ai-actions"><button type="button" class="icon-btn" data-act="copy" data-mid="' + esc(m.id) + '" aria-label="Copy answer" title="Copy answer">' + icon('copy', 14) + '</button></div>' +
+      '</div>';
+  }
+
+  function fillMarkdown(root, chatId) {
+    const msgs = msgsOf(chatId);
+    $$('[data-md]', root).forEach((node) => {
+      const id = node.getAttribute('data-md');
+      const m = msgs.find((x) => x.id === id);
+      if (!m) return;
+      let html = mdCache.get(id);
+      if (html == null) { html = markdownToSafeHtml(m.text); mdCache.set(id, html); }
+      node.innerHTML = html; // sanitized by DOMPurify (or escaped by the fallback renderer)
+      decorateMd(node);
+    });
+  }
+
+  function renderChatView(c) {
+    const msgs = msgsOf(c.id);
+    const busy = pending.has(c.id);
+    let html = '';
+    if (!msgs.length && !busy) {
+      if (c.pinned) {
+        html = '<div class="col">' + portfolioPanelHtml(c) + '<div class="pf-empty">Start with “Add holdings”, then ask for your live portfolio or a full review.</div></div>';
+      } else if (c.starter) {
+        html = topicHtml(c);
+      } else {
+        html = emptyStateHtml(c.ws);
+      }
+      el.view.innerHTML = html;
+      return;
+    }
+    html = '<div class="col">' + (c.pinned ? portfolioPanelHtml(c) : '') + '<div class="thread" id="thread">' +
+      msgs.map((m) => messageHtml(c, m)).join('') + (busy ? thinkingHtml(c) : '') + '</div></div>';
+    el.view.innerHTML = html;
+    fillMarkdown(el.view, c.id);
+  }
+
+  function renderSettings() {
+    const r = state.profile.risk;
+    el.view.innerHTML = '<div class="page">' +
+      '<h1 class="page-title">Settings</h1>' +
+      '<section class="card" id="sec-profile" aria-labelledby="h-profile"><h2 id="h-profile">Profile</h2>' +
+      '<label class="field" for="nameInput">Display name</label>' +
+      '<div class="field-row"><input class="text-input" id="nameInput" maxlength="40" value="' + esc(state.profile.name) + '" autocomplete="name">' +
+      '<button type="button" class="btn primary" data-act="save-name">Save name</button></div></section>' +
+      '<section class="card" id="sec-risk" aria-labelledby="h-risk"><h2 id="h-risk">Risk profile</h2>' +
+      '<p>Agents receive it as context, so ideas and position sizes fit how much risk you take.</p>' +
+      '<div class="radio-cards" role="radiogroup" aria-labelledby="h-risk">' + Object.keys(RISK).map((k) =>
+        '<label class="radio-card"><input type="radio" name="risk" value="' + k + '"' + (r === k ? ' checked' : '') + '><span class="rt">' + esc(RISK[k].label) + '</span><span class="rd">' + esc(RISK[k].desc) + '</span></label>').join('') + '</div>' +
+      (r ? '<div><button type="button" class="btn ghost sm" data-act="clear-risk">Clear risk profile</button></div>' : '') + '</section>' +
+      '<section class="card" aria-labelledby="h-data"><h2 id="h-data">Data on this device</h2>' +
+      '<p>Chats and messages are stored in this browser only. Use the gear menu to clear them. Your Portfolio chat link is kept, so saved holdings stay available.</p></section>' +
+      '</div>';
+  }
+
+  function renderArtifacts() {
+    el.view.innerHTML = '<div class="soon-wrap"><div class="soon-ic">' + icon('files', 24) + '</div>' +
+      '<h1 class="empty-title">Artifacts are coming soon</h1>' +
+      '<p class="empty-desc">Theses, portfolio reviews and reports from your chats will be saved here so you can reread and share them.</p>' +
+      '<button type="button" class="btn secondary" data-act="go-home">Back to chat</button></div>';
+  }
+
+  function renderMain() {
+    renderHeader();
+    if (view === 'artifacts') renderArtifacts();
+    else if (view === 'settings') renderSettings();
+    else {
+      const c = currentChat();
+      if (c) renderChatView(c);
+      else el.view.innerHTML = emptyStateHtml(state.draft.ws);
+    }
+    el.dock.hidden = view !== 'chat';
+    updateComposer();
+  }
+
+  function render() { renderSidebar(); renderMain(); }
+
+  /* ================= Composer ================= */
+  function getCtx() { const c = currentChat(); return c ? c.ctx : state.draft; }
+  function setCtx(patch) {
+    const t = getCtx();
+    Object.assign(t, patch);
+    save();
+    updateComposer();
+    renderHeader();
+  }
+  function autosize() {
+    const ta = el.input;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 196) + 'px';
+  }
+  function updateComposer() {
+    if (view !== 'chat') return;
+    const c = currentChat();
+    const ws = activeWs();
+    const w = WS[ws];
+    const ready = agentReady(ws);
+    const busy = c ? pending.has(c.id) : false;
+    const ctx = getCtx();
+    el.input.placeholder = c && c.pinned ? 'Ask about your portfolio, or add holdings…' : 'Ask the ' + w.agent + '…';
+    const a = ctx.asset && ASSETS[ctx.asset];
+    el.assetIcon.innerHTML = icon(a ? a.icon : 'grid', 16);
+    el.assetLabel.textContent = a ? a.label : 'Assets';
+    el.assetBtn.classList.toggle('set', !!a);
+    el.assetBtn.setAttribute('aria-label', 'Asset class: ' + (a ? a.label : 'none'));
+    if (document.activeElement !== el.symbol) el.symbol.value = ctx.symbol || '';
+    el.symbol.placeholder = a ? a.ph : 'Symbol';
+    el.symbolList.innerHTML = (a ? a.list : ASSET_ORDER.reduce((acc, k) => acc.concat(ASSETS[k].list.slice(0, 2)), [])).map((s) => '<option value="' + esc(s) + '"></option>').join('');
+    const hasText = el.input.value.trim().length > 0;
+    el.sendBtn.disabled = !ready || busy || !hasText;
+    el.sendBtn.classList.toggle('busy', busy);
+    el.sendBtn.innerHTML = busy ? '<span class="spinner" aria-hidden="true"></span>' : icon('zapFill', 18);
+    el.sendBtn.setAttribute('aria-label', busy ? 'Waiting for the answer' : 'Send message');
+    if (!ready) {
+      const alt = firstReadyWs();
+      const showAlt = agentReady(alt) && alt !== ws;
+      el.setupNote.innerHTML = icon('hourglass', 16) + '<span class="txt">The ' + esc(w.agent) + ' is being set up. You can read and type here, and sending will open as soon as it is live.</span>' +
+        (showAlt ? '<button type="button" class="btn secondary sm" data-act="use-ws" data-ws="' + alt + '">Ask the ' + esc(WS[alt].agent) + '</button>' : '');
+      el.setupNote.hidden = false;
+    } else {
+      el.setupNote.hidden = true;
+      el.setupNote.innerHTML = '';
+    }
+  }
+  function stashDraft() { drafts.set(draftKey(), el.input.value); }
+  function restoreDraft() { el.input.value = drafts.get(draftKey()) || ''; autosize(); }
+  function focusComposer() { if (!isMobile()) { try { el.input.focus({ preventScroll: true }); } catch (e) { el.input.focus(); } } }
+
+  function contextLine(ctx) {
+    const parts = [];
+    if (ctx && ctx.asset && ASSETS[ctx.asset]) parts.push('asset class = ' + ASSETS[ctx.asset].label);
+    if (ctx && ctx.symbol) parts.push('symbol = ' + ctx.symbol);
+    if (state.profile.risk && RISK[state.profile.risk]) parts.push('risk profile = ' + RISK[state.profile.risk].label);
+    return parts.length ? '[Context: ' + parts.join(', ') + ']' : '';
+  }
+
+  /* ================= Navigation ================= */
+  function closeDrawer() {
+    if (document.body.classList.contains('drawer-open')) {
+      document.body.classList.remove('drawer-open');
+      el.hdrOpen.setAttribute('aria-expanded', 'false');
+    }
+  }
+  function openDrawer(moveFocus) {
+    document.body.classList.add('drawer-open');
+    el.hdrOpen.setAttribute('aria-expanded', 'true');
+    if (moveFocus !== false) setTimeout(() => { const first = $('[data-nav]', el.sidebar); if (first) first.focus(); }, 30);
+  }
+  function openChat(id) {
+    const c = chatById(id);
+    if (!c) return;
+    stashDraft();
+    view = 'chat';
+    state.selected = id;
+    c.unread = false;
+    save();
+    closeDrawer();
+    render();
+    restoreDraft();
+    updateComposer();
+    scrollToBottom();
+    focusComposer();
+  }
+  function openHome(ws, carryText) {
+    stashDraft();
+    view = 'chat';
+    state.selected = null;
+    if (ws && WS[ws]) state.draft.ws = ws;
+    save();
+    closeDrawer();
+    render();
+    if (typeof carryText === 'string') { el.input.value = carryText; autosize(); } else restoreDraft();
+    updateComposer();
+    focusComposer();
+  }
+  function openPage(name, anchor) {
+    stashDraft();
+    view = name;
+    closeDrawer();
+    render();
+    el.view.scrollTop = 0;
+    if (anchor) { const t = document.getElementById(anchor); if (t) { t.scrollIntoView({ block: 'start' }); const f = $('input', t); if (f) f.focus({ preventScroll: true }); } }
+  }
+  function createChat(ws) {
+    const now = Date.now();
+    const c = { id: uid('c'), ws, title: 'New chat', starter: null, icon: null, ctx: { asset: null, symbol: '' }, sessionId: newSession(ws), pinned: false, createdAt: now, updatedAt: now, fresh: true, unread: false };
+    state.chats.push(c);
+    state.collapsed[ws] = false;
+    save();
+    openChat(c.id);
+    return c;
+  }
+  function pickAgent(ws) {
+    if (!WS[ws]) return;
+    const c = currentChat();
+    const text = el.input.value;
+    if (!c) { state.draft.ws = ws; save(); render(); updateComposer(); focusComposer(); return; }
+    if (c.fresh && !msgsOf(c.id).length && !pending.has(c.id)) {
+      c.ws = ws; c.sessionId = newSession(ws); state.collapsed[ws] = false; save(); render(); focusComposer(); return;
+    }
+    if (c.ws === ws) return;
+    openHome(ws, text);
+  }
+
+  function scrollToBottom() {
+    requestAnimationFrame(() => { el.view.scrollTop = el.view.scrollHeight; });
+  }
+  function nearBottom() { return el.view.scrollHeight - el.view.scrollTop - el.view.clientHeight < 160; }
+
+  /* ================= Sending ================= */
+  function pushMsg(chatId, m) {
+    if (!state.messages[chatId]) state.messages[chatId] = [];
+    const msg = Object.assign({ id: uid('m'), ts: Date.now() }, m);
+    state.messages[chatId].push(msg);
+    return msg;
+  }
+
+  function submitComposer() {
+    const text = el.input.value.trim();
+    if (!text) return;
+    const ws = activeWs();
+    if (!agentReady(ws)) { updateComposer(); return; }
+    let c = currentChat();
+    if (c && pending.has(c.id)) return;
+    if (!c) {
+      const now = Date.now();
+      c = { id: uid('c'), ws, title: makeTitle(text), starter: null, icon: null, ctx: { asset: state.draft.asset, symbol: state.draft.symbol }, sessionId: newSession(ws), pinned: false, createdAt: now, updatedAt: now, fresh: false, unread: false };
+      state.chats.push(c);
+      state.collapsed[ws] = false;
+      drafts.delete('home');
+      state.selected = c.id;
+      view = 'chat';
+    }
+    el.input.value = '';
+    drafts.delete(c.id);
+    autosize();
+    sendInChat(c, text, c.ctx);
+  }
+
+  function sendInChat(c, text, ctx) {
+    if (!agentReady(c.ws) || pending.has(c.id)) return;
+    if (c.fresh) { c.title = makeTitle(text); c.fresh = false; }
+    const line = contextLine(ctx);
+    const chatInput = line ? line + '\n' + text : text;
+    pushMsg(c.id, { role: 'user', text, ctx: ctxText(ctx) });
+    c.updatedAt = Date.now();
+    c.unread = false;
+    save();
+    dispatch(c.id, chatInput);
+  }
+
+  function extractReply(raw) {
+    const pick = (d, depth) => {
+      if (d == null || depth > 4) return '';
+      if (typeof d === 'string') return d;
+      if (Array.isArray(d)) return d.map((x) => pick(x, depth + 1)).filter(Boolean).join('\n\n');
+      if (typeof d === 'object') {
+        const keys = ['output', 'text', 'response', 'answer', 'reply', 'message', 'content'];
+        for (let i = 0; i < keys.length; i += 1) { if (typeof d[keys[i]] === 'string') return d[keys[i]]; }
+        for (let i = 0; i < keys.length; i += 1) { if (d[keys[i]] && typeof d[keys[i]] === 'object') { const r = pick(d[keys[i]], depth + 1); if (r) return r; } }
+        if (d.json) return pick(d.json, depth + 1);
+        if (d.data) return pick(d.data, depth + 1);
+      }
+      return '';
+    };
+    const t = String(raw == null ? '' : raw);
+    try { return pick(JSON.parse(t), 0); } catch (e) { return t; }
+  }
+
+  async function callAgent(url, sessionId, chatInput, signal) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/plain, */*' },
+      body: JSON.stringify({ action: 'sendMessage', sessionId, chatInput }),
+      signal,
+      credentials: 'omit',
+      cache: 'no-store'
+    });
+    const raw = await res.text();
+    if (!res.ok) {
+      const err = new Error('HTTP ' + res.status);
+      err.kind = 'http';
+      err.status = res.status;
+      err.detail = extractReply(raw).replace(/\s+/g, ' ').trim().slice(0, 180);
+      throw err;
+    }
+    const out = extractReply(raw);
+    if (!out || !out.trim()) { const err = new Error('Empty reply'); err.kind = 'empty'; throw err; }
+    return out;
+  }
+
+  function errorFor(kind, agent, status) {
+    if (kind === 'timeout') return 'The ' + agent + " didn't answer within 3 minutes. Retry, or ask a narrower question.";
+    if (kind === 'http') return 'The ' + agent + " couldn't finish this answer" + (status ? ' (HTTP ' + status + ')' : '') + '. Retry in a moment.';
+    if (kind === 'empty') return 'The ' + agent + ' returned an empty answer. Retry, or rephrase the question.';
+    if (kind === 'setup') return 'The ' + agent + ' is being set up. Retry once it is live.';
+    return "Couldn't reach the " + agent + '. Check your connection and retry.';
+  }
+
+  async function dispatch(chatId, chatInput) {
+    const c = chatById(chatId);
+    if (!c) return;
+    const agent = WS[c.ws].agent;
+    const url = webhookFor(c.ws);
+    if (!url) {
+      pushMsg(chatId, { role: 'error', kind: 'setup', text: errorFor('setup', agent), retry: chatInput, ws: c.ws });
+      save(); afterRun(chatId, false);
+      return;
+    }
+    const ctrl = new AbortController();
+    const run = { start: Date.now(), ctrl, timedOut: false };
+    const timer = setTimeout(() => { run.timedOut = true; ctrl.abort(); }, TIMEOUT_MS);
+    pending.set(chatId, run);
+    ensureTicker();
+    renderSidebar();
+    if (isViewing(chatId)) { renderMain(); scrollToBottom(); }
+    let ok = false;
+    try {
+      const reply = await callAgent(url, sessionFor(c), chatInput, ctrl.signal);
+      if (!chatById(chatId)) return;
+      pushMsg(chatId, { role: 'assistant', text: reply, ws: c.ws });
+      ok = true;
+      announce(agent + ' replied.');
+    } catch (err) {
+      if (!chatById(chatId) || run.cancelled) return;
+      let kind = 'network';
+      if (run.timedOut) kind = 'timeout';
+      else if (err && err.kind) kind = err.kind;
+      pushMsg(chatId, { role: 'error', kind, text: errorFor(kind, agent, err && err.status), detail: kind === 'http' && err.detail ? err.detail : '', retry: chatInput, ws: c.ws });
+      announce(errorFor(kind, agent, err && err.status));
+    } finally {
+      clearTimeout(timer);
+      if (pending.get(chatId) === run) pending.delete(chatId);
+      if (!pending.size) stopTicker();
+      if (chatById(chatId) && !run.cancelled) { save(); afterRun(chatId, ok); }
+      else if (!chatById(chatId)) { delete state.messages[chatId]; save(); }
+    }
+  }
+
+  function afterRun(chatId, ok) {
+    const c = chatById(chatId);
+    if (!c) return;
+    c.updatedAt = Date.now();
+    if (isViewing(chatId)) {
+      const wasNear = nearBottom();
+      renderMain();
+      renderSidebar();
+      const items = $$('#thread > .msg-ai, #thread > .msg-user', el.view);
+      const last = items[items.length - 1];
+      if (last && wasNear) {
+        requestAnimationFrame(() => {
+          const top = last.offsetTop - 16;
+          el.view.scrollTop = last.offsetHeight > el.view.clientHeight ? top : el.view.scrollHeight;
+        });
+      }
+    } else {
+      c.unread = true;
+      renderSidebar();
+      updateComposer();
+      toast((ok ? WS[c.ws].agent + ' replied in “' : 'The answer failed in “') + c.title + '”', ok ? 'ok' : 'error');
+    }
+    save();
+  }
+
+  function retryMessage(mid) {
+    const c = currentChat();
+    if (!c || pending.has(c.id)) return;
+    const list = msgsOf(c.id);
+    const idx = list.findIndex((m) => m.id === mid);
+    if (idx < 0) return;
+    const m = list[idx];
+    if (!m.retry) return;
+    list.splice(idx, 1);
+    save();
+    dispatch(c.id, m.retry);
+  }
+
+  function ensureTicker() {
+    if (tickTimer) return;
+    tickTimer = setInterval(() => {
+      $$('[data-thinking]', el.view).forEach((node) => {
+        const id = node.getAttribute('data-thinking');
+        const p = pending.get(id);
+        const c = chatById(id);
+        if (!p || !c) return;
+        const e = Date.now() - p.start;
+        const lbl = $('.lbl', node);
+        const t = thinkingLabel(c.ws, e);
+        if (lbl && lbl.textContent !== t) lbl.textContent = t;
+        const tm = $('.elapsed', node);
+        if (tm) tm.textContent = fmtElapsed(e);
+      });
+    }, 1000);
+  }
+  function stopTicker() { clearInterval(tickTimer); tickTimer = null; }
+
+  /* ================= Floating menus ================= */
+  let menuState = null;
+  function closeMenu(restoreFocus) {
+    if (!menuState) return;
+    const { node, anchor } = menuState;
+    menuState = null;
+    node.remove();
+    if (anchor && anchor.isConnected) {
+      anchor.setAttribute('aria-expanded', 'false');
+      if (restoreFocus) anchor.focus();
+    }
+  }
+  function positionMenu() {
+    if (!menuState) return;
+    const { node, anchor, placement } = menuState;
+    const r = anchor.getBoundingClientRect();
+    const mw = node.offsetWidth; const mh = node.offsetHeight;
+    const vw = window.innerWidth; const vh = window.innerHeight;
+    let top = placement.indexOf('top') === 0 ? r.top - mh - 6 : r.bottom + 6;
+    if (top + mh > vh - 8) top = r.top - mh - 6;
+    if (top < 8) top = Math.min(r.bottom + 6, vh - mh - 8);
+    let left = /end$/.test(placement) ? r.right - mw : r.left;
+    left = Math.max(8, Math.min(left, vw - mw - 8));
+    node.style.top = Math.round(Math.max(8, top)) + 'px';
+    node.style.left = Math.round(left) + 'px';
+  }
+  function menuFocusables(node) { return $$('button:not(:disabled)', node); }
+  function openMenu(anchor, items, opts) {
+    const o = opts || {};
+    closeMenu(false);
+    const node = document.createElement('div');
+    node.className = 'menu';
+    node.setAttribute('role', 'menu');
+    node.setAttribute('aria-label', o.label || 'Menu');
+    document.body.appendChild(node);
+    menuState = { node, anchor, placement: o.placement || 'bottom-end' };
+    anchor.setAttribute('aria-expanded', 'true');
+    setMenuItems(items);
+    node.addEventListener('keydown', onMenuKey);
+  }
+  function setMenuItems(items) {
+    if (!menuState) return;
+    const { node } = menuState;
+    node.innerHTML = '';
+    items.forEach((it) => {
+      if (it.sep) { const s = document.createElement('div'); s.className = 'menu-sep'; s.setAttribute('role', 'separator'); node.appendChild(s); return; }
+      if (it.heading) { const h = document.createElement('div'); h.className = 'menu-label'; h.textContent = it.heading; node.appendChild(h); return; }
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'menu-item' + (it.danger ? ' danger' : '');
+      b.setAttribute('role', it.checked != null ? 'menuitemradio' : 'menuitem');
+      if (it.checked != null) b.setAttribute('aria-checked', String(!!it.checked));
+      b.innerHTML = icon(it.icon || 'message', 16) + '<span></span>' + (it.checked ? icon('check', 14, 'chk') : '');
+      b.querySelector('span').textContent = it.label;
+      b.addEventListener('click', (e) => { e.stopPropagation(); it.onSelect(); });
+      node.appendChild(b);
+    });
+    positionMenu();
+    const f = menuFocusables(node)[0];
+    if (f) f.focus();
+  }
+  function setMenuConfirm(message, sub, confirmLabel, onConfirm) {
+    if (!menuState) return;
+    const { node } = menuState;
+    node.innerHTML = '<div class="menu-confirm" role="group"><p></p>' + (sub ? '<p class="sub"></p>' : '') +
+      '<div class="row"><button type="button" class="btn primary sm" data-c="yes"></button><button type="button" class="btn ghost sm" data-c="no">Cancel</button></div></div>';
+    $('p', node).textContent = message;
+    if (sub) $('p.sub', node).textContent = sub;
+    $('[data-c="yes"]', node).textContent = confirmLabel;
+    $('[data-c="yes"]', node).addEventListener('click', (e) => { e.stopPropagation(); onConfirm(); });
+    $('[data-c="no"]', node).addEventListener('click', (e) => { e.stopPropagation(); closeMenu(true); });
+    positionMenu();
+    $('[data-c="no"]', node).focus();
+  }
+  function onMenuKey(e) {
+    if (!menuState) return;
+    const items = menuFocusables(menuState.node);
+    const i = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!items.length) return;
+      const n = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+      items[n].focus();
+    } else if (e.key === 'Home') { e.preventDefault(); if (items[0]) items[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); if (items.length) items[items.length - 1].focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+    else if (e.key === 'Tab') { closeMenu(false); }
+  }
+
+  function chatMenu(anchor, c, where) {
+    openMenu(anchor, [
+      { label: 'Rename', icon: 'pencil', onSelect: () => { closeMenu(false); startRename(c.id, where); } },
+      { label: 'Delete', icon: 'trash', danger: true, onSelect: () => setMenuConfirm('Delete “' + c.title + '”?', 'Its messages are removed from this device.', 'Delete', () => { closeMenu(false); deleteChat(c.id); }) }
+    ], { label: 'Chat options', placement: 'bottom-end' });
+  }
+
+  function assetMenu() {
+    const ctx = getCtx();
+    const items = [{ heading: 'Asset class' }];
+    ASSET_ORDER.forEach((k) => {
+      items.push({ label: ASSETS[k].label, icon: ASSETS[k].icon, checked: ctx.asset === k, onSelect: () => { chooseAsset(k); } });
+    });
+    items.push({ sep: true });
+    items.push({ label: 'No asset class', icon: 'x', checked: !ctx.asset, onSelect: () => { chooseAsset(null); } });
+    openMenu(el.assetBtn, items, { label: 'Asset class', placement: 'top-start' });
+  }
+  function chooseAsset(k) {
+    const ctx = getCtx();
+    const changed = ctx.asset !== k;
+    closeMenu(false);
+    setCtx({ asset: k, symbol: changed ? '' : ctx.symbol });
+    if (k) el.symbol.focus(); else el.assetBtn.focus();
+  }
+
+  function gearMenu() {
+    openMenu(el.gearBtn, [
+      { label: 'Profile', icon: 'user', onSelect: () => { closeMenu(false); openPage('settings', 'sec-profile'); } },
+      { label: 'Risk profile', icon: 'gauge', onSelect: () => { closeMenu(false); openPage('settings', 'sec-risk'); } },
+      { sep: true },
+      { label: 'Clear local data', icon: 'eraser', danger: true, onSelect: () => setMenuConfirm('Clear all chats and messages on this device?', 'Your Portfolio chat link is kept, so saved holdings stay available.', 'Clear data', () => { closeMenu(false); clearLocalData(); }) }
+    ], { label: 'Settings', placement: 'top-end' });
+  }
+
+  /* ================= Rename / delete ================= */
+  function startRename(id, where) {
+    const c = chatById(id);
+    if (!c || c.pinned) return;
+    const mode = where === 'header' && isViewing(id) && $('#crumbTitle') ? 'header' : 'sidebar';
+    let host;
+    if (mode === 'header') {
+      host = $('#crumbTitle');
+    } else {
+      if (isMobile() && !document.body.classList.contains('drawer-open')) openDrawer(false);
+      state.collapsed[c.ws] = false;
+      renderSidebar();
+      host = $('.chat-row[data-id="' + CSS.escape(id) + '"]', el.groups);
+    }
+    if (!host) return;
+    const input = document.createElement('input');
+    input.className = mode === 'header' ? 'crumb-input' : 'rename-input';
+    input.value = c.title;
+    input.maxLength = 80;
+    input.setAttribute('aria-label', 'Chat title');
+    if (mode === 'header') host.replaceWith(input);
+    else { host.innerHTML = ''; host.appendChild(input); }
+    renaming = mode;
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      renaming = null;
+      const v = input.value.replace(/\s+/g, ' ').trim();
+      if (commit && v && v !== c.title) { c.title = v.slice(0, 80); c.fresh = false; save(); toast('Chat renamed'); }
+      renderSidebar();
+      renderHeader();
+      const btn = $('.chat-row[data-id="' + CSS.escape(id) + '"] .chat-link', el.groups);
+      if (mode === 'sidebar' && btn) btn.focus();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+    input.focus();
+    input.select();
+  }
+
+  function deleteChat(id) {
+    const c = chatById(id);
+    if (!c || c.pinned) return;
+    const p = pending.get(id);
+    if (p) { p.cancelled = true; try { p.ctrl.abort(); } catch (e) { /* ignore */ } pending.delete(id); }
+    (state.messages[id] || []).forEach((m) => mdCache.delete(m.id));
+    delete state.messages[id];
+    state.chats = state.chats.filter((x) => x.id !== id);
+    drafts.delete(id);
+    const wasOpen = isViewing(id);
+    save();
+    if (wasOpen) { state.selected = null; state.draft.ws = c.ws; render(); restoreDraft(); updateComposer(); }
+    else renderSidebar();
+    toast('Chat deleted');
+  }
+
+  function clearLocalData() {
+    pending.forEach((p) => { p.cancelled = true; try { p.ctrl.abort(); } catch (e) { /* ignore */ } });
+    pending.clear();
+    stopTicker();
+    mdCache.clear();
+    drafts.clear();
+    try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ }
+    state = seedState();
+    view = 'chat';
+    el.input.value = '';
+    autosize();
+    saveNow();
+    render();
+    toast('Local data cleared');
+  }
+
+  /* ================= Search palette ================= */
+  let paletteResults = [];
+  let paletteIndex = 0;
+  let paletteReturn = null;
+  function openPalette() {
+    closeMenu(false);
+    paletteReturn = document.activeElement;
+    el.palette.hidden = false;
+    el.paletteInput.value = '';
+    renderPalette();
+    el.paletteInput.focus();
+  }
+  function closePalette() {
+    if (el.palette.hidden) return;
+    el.palette.hidden = true;
+    if (paletteReturn && paletteReturn.isConnected) paletteReturn.focus();
+  }
+  function renderPalette() {
+    const q = el.paletteInput.value.trim().toLowerCase();
+    const all = state.chats.slice().sort((a, b) => (a.pinned !== b.pinned ? (a.pinned ? -1 : 1) : b.updatedAt - a.updatedAt));
+    paletteResults = !q ? all.slice(0, 30) : all.filter((c) => {
+      if (c.title.toLowerCase().includes(q) || WS[c.ws].label.toLowerCase().includes(q)) return true;
+      return msgsOf(c.id).some((m) => String(m.text || '').toLowerCase().includes(q));
+    }).slice(0, 30);
+    paletteIndex = 0;
+    if (!paletteResults.length) {
+      el.paletteList.innerHTML = '<li class="palette-empty" role="presentation">No chats match “' + esc(el.paletteInput.value.trim()) + '”</li>';
+      el.paletteInput.removeAttribute('aria-activedescendant');
+      return;
+    }
+    el.paletteList.innerHTML = paletteResults.map((c, i) => '<li class="palette-item" role="option" id="pi-' + i + '" data-i="' + i + '" aria-selected="' + (i === 0) + '">' +
+      icon(c.pinned ? 'pin' : WS[c.ws].icon, 14) + '<span class="t">' + esc(c.title) + '</span><span class="w">' + esc(WS[c.ws].label) + '</span></li>').join('');
+    el.paletteInput.setAttribute('aria-activedescendant', 'pi-0');
+  }
+  function movePalette(d) {
+    if (!paletteResults.length) return;
+    paletteIndex = (paletteIndex + d + paletteResults.length) % paletteResults.length;
+    $$('.palette-item', el.paletteList).forEach((n, i) => n.setAttribute('aria-selected', String(i === paletteIndex)));
+    const cur = $('#pi-' + paletteIndex);
+    if (cur) cur.scrollIntoView({ block: 'nearest' });
+    el.paletteInput.setAttribute('aria-activedescendant', 'pi-' + paletteIndex);
+  }
+  function choosePalette(i) {
+    const c = paletteResults[i];
+    if (!c) return;
+    el.palette.hidden = true;
+    openChat(c.id);
+  }
+
+  /* ================= Toasts / announcements ================= */
+  function toast(text, kind) {
+    const t = document.createElement('div');
+    t.className = 'toast' + (kind === 'error' ? ' error' : '');
+    t.innerHTML = icon(kind === 'error' ? 'alert' : 'check', 16) + '<span></span>';
+    t.querySelector('span').textContent = text;
+    el.toasts.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+  }
+  function announce(text) { el.srLive.textContent = ''; setTimeout(() => { el.srLive.textContent = text; }, 50); }
+
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    } catch (e) { /* fall back */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e) { return false; }
+  }
+
+  /* ================= Events ================= */
+  // Sidebar
+  $('#newChatBtn').addEventListener('click', () => openHome(defaultWs(), ''));
+  $('#hdrNew').addEventListener('click', () => openHome(defaultWs(), ''));
+  $('#searchBtn').addEventListener('click', () => { closeDrawer(); openPalette(); });
+  el.artifactsBtn.addEventListener('click', () => openPage('artifacts'));
+  $('#brandLink').addEventListener('click', (e) => { e.preventDefault(); openHome(defaultWs(), ''); });
+  $('#sbClose').addEventListener('click', () => {
+    if (isMobile()) { closeDrawer(); el.hdrOpen.focus(); return; }
+    state.sbCollapsed = true; document.body.classList.add('sb-collapsed'); save();
+    el.hdrOpen.setAttribute('aria-expanded', 'false');
+    el.hdrOpen.focus();
+  });
+  el.hdrOpen.addEventListener('click', () => {
+    if (isMobile()) { if (document.body.classList.contains('drawer-open')) closeDrawer(); else openDrawer(); return; }
+    state.sbCollapsed = false; document.body.classList.remove('sb-collapsed'); save();
+    el.hdrOpen.setAttribute('aria-expanded', 'true');
+    const first = $('[data-nav]', el.sidebar); if (first) first.focus();
+  });
+  el.scrim.addEventListener('click', closeDrawer);
+  el.gearBtn.addEventListener('click', (e) => { e.stopPropagation(); if (menuState && menuState.anchor === el.gearBtn) closeMenu(false); else gearMenu(); });
+
+  el.groups.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act]');
+    if (!t) return;
+    const act = t.getAttribute('data-act');
+    const ws = t.getAttribute('data-ws');
+    const id = t.getAttribute('data-id');
+    if (act === 'toggle-group') {
+      state.collapsed[ws] = !state.collapsed[ws]; save(); renderSidebar();
+      const b = $('.grp-toggle[data-ws="' + ws + '"]', el.groups); if (b) b.focus();
+    } else if (act === 'add-chat') {
+      createChat(ws);
+    } else if (act === 'open-chat') {
+      openChat(id);
+    } else if (act === 'chat-menu') {
+      e.stopPropagation();
+      if (menuState && menuState.anchor === t) { closeMenu(false); return; }
+      const c = chatById(id); if (c) chatMenu(t, c, 'sidebar');
+    } else if (act === 'show-all') {
+      state.showAll[ws] = !state.showAll[ws]; save(); renderSidebar();
+    }
+  });
+
+  // Arrow-key navigation through the sidebar
+  el.sidebar.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const t = e.target;
+    if (!t.matches || !t.matches('[data-nav]')) return;
+    const list = $$('[data-nav]', el.sidebar).filter((n) => n.offsetParent !== null);
+    const i = list.indexOf(t);
+    if (i < 0) return;
+    e.preventDefault();
+    const n = list[e.key === 'ArrowDown' ? Math.min(list.length - 1, i + 1) : Math.max(0, i - 1)];
+    if (n) n.focus();
+  });
+
+  // Header
+  el.hdrRight.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act="header-menu"]');
+    if (!t) return;
+    e.stopPropagation();
+    if (menuState && menuState.anchor === t) { closeMenu(false); return; }
+    const c = currentChat(); if (c && !c.pinned) chatMenu(t, c, 'header');
+  });
+
+  // Main view
+  el.view.addEventListener('click', async (e) => {
+    const t = e.target.closest('[data-act]');
+    if (!t || t.disabled) return;
+    const act = t.getAttribute('data-act');
+    const c = currentChat();
+    if (act === 'pick-agent') pickAgent(t.getAttribute('data-ws'));
+    else if (act === 'chip') {
+      const text = t.getAttribute('data-prompt');
+      if (c) sendInChat(c, text, c.ctx);
+      else { el.input.value = text; submitComposer(); }
+    } else if (act === 'start' && c && c.starter) sendInChat(c, c.starter, c.ctx);
+    else if (act === 'retry') retryMessage(t.getAttribute('data-mid'));
+    else if (act === 'copy' && c) {
+      const m = msgsOf(c.id).find((x) => x.id === t.getAttribute('data-mid'));
+      if (m) toast((await copyText(m.text)) ? 'Answer copied' : "Couldn't copy. Select the text instead.", undefined);
+    } else if (act === 'pf-show' && c) sendInChat(c, PF_PROMPTS.show, { asset: null, symbol: '' });
+    else if (act === 'pf-review' && c) sendInChat(c, PF_PROMPTS.review, { asset: null, symbol: '' });
+    else if (act === 'pf-add') {
+      el.input.value = PF_PROMPTS.add;
+      autosize(); updateComposer();
+      el.input.focus();
+      el.input.setSelectionRange(el.input.value.length, el.input.value.length);
+    } else if (act === 'save-name') {
+      const inp = $('#nameInput');
+      const v = inp ? inp.value.replace(/\s+/g, ' ').trim().slice(0, 40) : '';
+      if (!v) { toast('Enter a display name first', 'error'); return; }
+      state.profile.name = v; save(); renderSidebar(); toast('Name saved');
+    } else if (act === 'clear-risk') {
+      state.profile.risk = null; save(); renderSettings(); toast('Risk profile cleared');
+    } else if (act === 'go-home') openHome(defaultWs());
+  });
+  el.view.addEventListener('change', (e) => {
+    if (e.target && e.target.name === 'risk' && RISK[e.target.value]) {
+      state.profile.risk = e.target.value; save();
+      toast('Risk profile set to ' + RISK[e.target.value].label);
+      if (!$('[data-act="clear-risk"]', el.view)) { renderSettings(); const r = $('input[name="risk"][value="' + e.target.value + '"]', el.view); if (r) r.focus(); }
+    }
+  });
+  el.view.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'nameInput' && e.key === 'Enter') { e.preventDefault(); const b = $('[data-act="save-name"]', el.view); if (b) b.click(); }
+  });
+
+  // Composer
+  el.composer.addEventListener('submit', (e) => { e.preventDefault(); submitComposer(); });
+  el.input.addEventListener('input', () => { autosize(); updateComposer(); });
+  el.input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+      e.preventDefault();
+      if (!el.sendBtn.disabled) submitComposer();
+    }
+  });
+  el.assetBtn.addEventListener('click', (e) => { e.stopPropagation(); if (menuState && menuState.anchor === el.assetBtn) closeMenu(false); else assetMenu(); });
+  el.assetBtn.addEventListener('keydown', (e) => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); assetMenu(); } });
+  el.symbol.addEventListener('input', () => {
+    const pos = el.symbol.selectionStart;
+    const v = cleanSymbol(el.symbol.value);
+    if (v !== el.symbol.value) { el.symbol.value = v; try { el.symbol.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } }
+    getCtx().symbol = v; save(); renderHeader();
+  });
+  el.symbol.addEventListener('change', () => { setCtx({ symbol: cleanSymbol(el.symbol.value) }); });
+  el.symbol.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); el.input.focus(); } });
+  el.setupNote.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-act="use-ws"]');
+    if (t) openHome(t.getAttribute('data-ws'), el.input.value);
+  });
+
+  // Palette
+  el.paletteInput.addEventListener('input', renderPalette);
+  el.paletteInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); movePalette(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); movePalette(-1); }
+    else if (e.key === 'Enter') { e.preventDefault(); choosePalette(paletteIndex); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePalette(); }
+    else if (e.key === 'Tab') { e.preventDefault(); }
+  });
+  el.paletteList.addEventListener('click', (e) => { const li = e.target.closest('[data-i]'); if (li) choosePalette(Number(li.getAttribute('data-i'))); });
+  el.palette.addEventListener('mousedown', (e) => { if (e.target === el.palette) closePalette(); });
+
+  // Global
+  document.addEventListener('pointerdown', (e) => {
+    if (menuState && !menuState.node.contains(e.target) && !menuState.anchor.contains(e.target)) closeMenu(false);
+  });
+  document.addEventListener('scroll', (e) => { if (menuState && !menuState.node.contains(e.target)) closeMenu(false); }, true);
+  window.addEventListener('resize', () => { if (menuState) closeMenu(false); if (!isMobile()) closeDrawer(); });
+  document.addEventListener('keydown', (e) => {
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (mod && !e.shiftKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); if (el.palette.hidden) openPalette(); else closePalette(); return; }
+    if (mod && e.shiftKey && (e.key === 'o' || e.key === 'O')) { e.preventDefault(); openHome(defaultWs(), ''); return; }
+    if (e.key === 'Escape') {
+      if (menuState) { closeMenu(true); return; }
+      if (!el.palette.hidden) { closePalette(); return; }
+      if (document.body.classList.contains('drawer-open')) { closeDrawer(); el.hdrOpen.focus(); }
+    }
+  });
+  window.addEventListener('pagehide', saveNow);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
+
+  /* ================= Init ================= */
+  function init() {
+    hydrateIcons(document);
+    $('#kbdNew').textContent = isMac ? '⌘⇧O' : 'Ctrl ⇧ O';
+    $('#kbdSearch').textContent = isMac ? '⌘K' : 'Ctrl K';
+    if (state.sbCollapsed && !isMobile()) document.body.classList.add('sb-collapsed');
+    el.hdrOpen.setAttribute('aria-expanded', String(!state.sbCollapsed && !isMobile()));
+    portfolioSessionId();
+    render();
+    restoreDraft();
+    updateComposer();
+    scrollToBottom();
+    focusComposer();
+    saveNow();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>
