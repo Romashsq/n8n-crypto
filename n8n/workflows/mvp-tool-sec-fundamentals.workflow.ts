@@ -53,7 +53,7 @@ const C = {
   capex: { kind: 'money', type: 'flow', us: ['PaymentsToAcquirePropertyPlantAndEquipment', 'PaymentsToAcquireProductiveAssets', 'PaymentsToAcquirePropertyPlantAndEquipmentAndIntangibleAssets'], ifrs: ['PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities', 'PurchaseOfPropertyPlantAndEquipment'] },
   cash: { kind: 'money', type: 'instant', us: ['CashAndCashEquivalentsAtCarryingValue', 'CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents', 'Cash'], ifrs: ['CashAndCashEquivalents'] },
   short_term_investments: { kind: 'money', type: 'instant', us: ['MarketableSecuritiesCurrent', 'ShortTermInvestments', 'DebtSecuritiesCurrent', 'AvailableForSaleSecuritiesDebtSecuritiesCurrent'], ifrs: ['CurrentInvestments'] },
-  long_term_debt: { kind: 'money', type: 'instant', us: ['LongTermDebt', 'LongTermDebtNoncurrent', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermNotesPayable'], ifrs: ['NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings'] },
+  long_term_debt: { kind: 'money', type: 'instant', us: ['LongTermDebtNoncurrent', 'LongTermDebt', 'LongTermDebtAndCapitalLeaseObligations', 'LongTermNotesPayable'], ifrs: ['NoncurrentPortionOfNoncurrentBorrowings', 'LongtermBorrowings'] },
   lt_marketable_securities: { kind: 'money', type: 'instant', us: ['MarketableSecuritiesNoncurrent', 'AvailableForSaleSecuritiesDebtSecuritiesNoncurrent'], ifrs: ['NoncurrentInvestments'] },
   ltd_current: { kind: 'money', type: 'instant', us: ['LongTermDebtCurrent'], ifrs: ['CurrentPortionOfNoncurrentBorrowings'] },
   short_term_debt: { kind: 'money', type: 'instant', us: ['CommercialPaper', 'ShortTermBorrowings'], ifrs: ['ShorttermBorrowings'] },
@@ -276,7 +276,7 @@ if (facts) {
     const dparts = [];
     if (debtV !== null) {
       dparts.push(bal.long_term_debt[balEnd].concept);
-      if (bal.long_term_debt[balEnd].concept !== 'LongTermDebt' && at('ltd_current') !== null) { debtV += at('ltd_current'); dparts.push('LongTermDebtCurrent'); }
+      if (bal.long_term_debt[balEnd].concept === 'LongTermDebtNoncurrent' && at('ltd_current') !== null) { debtV += at('ltd_current'); dparts.push('LongTermDebtCurrent'); }
       if (at('short_term_debt') !== null) { debtV += at('short_term_debt'); dparts.push(bal.short_term_debt[balEnd].concept); }
     }
     derived = {
@@ -314,7 +314,6 @@ if (facts) {
   if (gpDerived) notes.push('Gross profit derived as revenue minus cost of revenue where GrossProfit was not tagged.');
   Object.keys(fallbacks).forEach(function (f) { notes.push(f + ' uses fallback concept ' + fallbacks[f]); });
   if (!annual.length) notes.push('No annual (10-K/20-F) XBRL data found.');
-  if (fyEnd0 && A.long_term_debt[fyEnd0] && A.long_term_debt[fyEnd0].p === 0 && taxonomy === 'us-gaap') notes.push('long_term_debt is the LongTermDebt tag (total term debt incl. current portion).');
 } else {
   const msg = cf.error ? (cf.error.message || JSON.stringify(cf.error).slice(0, 200)) : 'no data';
   notes.push('SEC XBRL company facts unavailable: ' + msg);
@@ -349,7 +348,7 @@ return [{ json: {
   source: 'SEC EDGAR XBRL companyfacts + submissions',
   as_of: new Date().toISOString(),
   taxonomy: facts ? taxonomy : null,
-  units: 'Money and share counts in ' + (currency || 'USD') + ' millions / millions of shares; eps_diluted in ' + (currency || 'USD') + ' per share; *_pct in percent; null = not reported',
+  units: 'Money and share counts in ' + (currency || 'USD') + ' millions / millions of shares; eps_diluted in ' + (currency || 'USD') + ' per share; *_pct in percent; long_term_debt = non-current portion; null = not reported',
   annual_oldest_to_newest: annual,
   latest_quarter: latestQuarter,
   ttm: ttm,
