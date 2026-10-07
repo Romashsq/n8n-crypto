@@ -539,4 +539,10 @@ export default workflow('aura-mvp-tool-sec-fundamentals', 'Aura · MVP · Tool �
     .onFalse(notFound))
   .add(manualTest)
   .to(testInput)
-  .to(normalizeInput);
+  .to(normalizeInput)
+  .group('Resolve ticker to CIK', [normalizeInput, fetchTickerMap, resolveCik, cikFound], {
+    description: 'Normalizes the ticker, downloads the SEC ticker map and finds the 10-digit CIK; unknown tickers go to Ticker Not Found.',
+  })
+  .group('Fetch and summarize SEC data', [fetchFacts, fetchSubmissions, summarize], {
+    description: 'Pulls XBRL companyfacts and the submissions list, then condenses them into one compact fundamentals JSON for the agent.',
+  });

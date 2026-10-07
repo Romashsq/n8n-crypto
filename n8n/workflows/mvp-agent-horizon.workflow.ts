@@ -208,23 +208,23 @@ const priceHistory = tool({
   config: {
     name: 'price_history',
     parameters: {
-      toolDescription: 'Yahoo Finance long-run price history for stocks, ETFs, indices (^GSPC, ^NDX) and gold futures (GC=F): adjusted closes with Unix timestamps, plus meta (latest price, time, 52-week high and low, currency).',
+      toolDescription: 'Yahoo Finance long-run price history for stocks, ETFs, indices (^GSPC, ^NDX) and gold futures (GC=F): result[0].meta (latest price regularMarketPrice, regularMarketTime, 52-week high and low, currency), timestamp (Unix seconds) and indicators (quote OHLCV and adjclose, split- and dividend-adjusted).',
       method: 'GET',
       url: `={{ 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent($fromAI('ticker', 'Yahoo ticker, e.g. NVDA, SPY, QQQ, ^GSPC, GC=F', 'string')) }}`,
       sendQuery: true,
       queryParameters: {
         parameters: [
-          { name: 'interval', value: fromAi('interval', 'Bar interval: 1mo (default, long-run) or 1wk (finer detail)', 'string') },
-          { name: 'range', value: fromAi('range', 'History range: 5y (default), 10y or max', 'string') },
+          { name: 'interval', value: fromAi('interval', 'Bar interval: 1mo (default, use for long-run CAGR and drawdowns) or 1wk (only with range 1y or 2y)', 'string') },
+          { name: 'range', value: fromAi('range', 'History range: 5y (default) or 10y with 1mo; 1y or 2y with 1wk', 'string') },
         ],
       },
       sendHeaders: true,
       headerParameters: { parameters: [{ name: 'User-Agent', value: 'Mozilla/5.0 (compatible; AuraInvestAI/1.0)' }] },
       optimizeResponse: true,
       responseType: 'json',
-      dataField: 'chart.result',
+      dataField: 'chart',
       fieldsToInclude: 'selected',
-      fields: 'meta.symbol,meta.longName,meta.currency,meta.regularMarketPrice,meta.regularMarketTime,meta.fiftyTwoWeekHigh,meta.fiftyTwoWeekLow,timestamp,indicators.adjclose',
+      fields: 'result',
       options: { timeout: 20000 },
     },
     position: [540, 260],
@@ -280,7 +280,7 @@ const cryptoFees = tool({
       optimizeResponse: true,
       responseType: 'json',
       fieldsToInclude: 'selected',
-      fields: 'name,displayName,category,chains,total24h,total7d,total30d,total1y,totalAllTime,change_1d,change_7d,change_1m',
+      fields: 'name,displayName,category,chains,total24h,total7d,total30d,total1y,annualized1y,totalAllTime,change_1d,change_7d,change_1m',
       options: { timeout: 20000 },
     },
     position: [820, 260],
@@ -385,4 +385,7 @@ const agent = node({
 
 export default workflow('aura-mvp-horizon-agent', 'Aura · MVP · Horizon Agent')
   .add(chatTrigger)
-  .to(agent);
+  .to(agent)
+  .group('Horizon agent', [agent, model, chatMemory, secFundamentals, priceHistory, cryptoProfile, cryptoFees, cryptoTvl, cryptoPrices, newsSearch, researchWeb, calculator], {
+    description: 'Claude agent with memory and tools: SEC fundamentals, Yahoo prices, CoinGecko, DefiLlama, Binance, Brave search, calculator.',
+  });
