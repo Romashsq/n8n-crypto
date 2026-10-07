@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aura Invest AI</title>
+<meta name="description" content="Aura Invest AI: four AI agents for trading, long-term investing and your portfolio, grounded in live market data.">
+<meta name="theme-color" content="#121214">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M15.2 2 5 14.6h6.6L9.8 24 21 10.6h-6.7L15.2 2Z' fill='%239B111E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Claude-style app shell. Fixed sidebar (brand, New Chat, three agent workspaces, profile) + conversation pane with agent dots above the composer. Single deliberate dark look. */
+:root {
+  color-scheme: dark;
+  --bg: #121214;          /* matte charcoal app ground */
+  --panel: #18181c;       /* sidebar */
+  --surface: #1e1e24;     /* inputs, cards */
+  --raised: #26262e;      /* hover, active row */
+  --line: #2b2b33;
+  --text: #f4f4f6;
+  --muted: #9ca3af;
+  --faint: #6b7280;
+  --ruby: #9b111e;        /* owner's accent */
+  --ruby-hi: #b5172a;
+  --ruby-text: #f0707f;
+  --ruby-tint: rgba(155, 17, 30, 0.16);
+  --up: #3dbe8b;
+  --down: #ef5a52;
+  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--ruby-hi); outline-offset: 2px; border-radius: 6px; }
+svg { flex: none; }
+
+.app { display: grid; grid-template-columns: 284px minmax(0, 1fr); height: 100%; }
+
+/* ---------- Sidebar ---------- */
+.side { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; padding: 14px 12px; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px; font-weight: 600; font-size: 15px; letter-spacing: 0.01em; }
+.newchat { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); text-align: left; font-weight: 500; }
+.newchat:hover { background: var(--raised); }
+.navrow { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); text-align: left; }
+.navrow:hover { background: var(--raised); color: var(--text); }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); padding: 14px 8px 4px; }
+.groups { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding-right: 2px; }
+.group { border-radius: 10px; }
+.ghead { display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 8px; border-radius: 8px; }
+.ghead:hover { background: var(--raised); }
+.gtoggle { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; font-weight: 600; }
+.gtoggle .chev { transition: transform 0.15s ease; color: var(--muted); }
+.group.closed .chev { transform: rotate(-90deg); }
+.gplus { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.gplus:hover { color: var(--text); background: var(--raised); }
+.group.active .ghead .gname { color: var(--text); }
+.chats { list-style: none; margin: 2px 0 6px; padding: 0 0 0 22px; display: flex; flex-direction: column; gap: 1px; }
+.group.closed .chats { display: none; }
+.chat { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border-radius: 7px; border: 0; background: none; color: var(--muted); text-align: left; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat:hover { background: var(--raised); color: var(--text); }
+.chat.current { background: var(--raised); color: var(--text); }
+.chat.pinned { background: #22222a; color: var(--text); box-shadow: inset 2px 0 0 var(--ruby); border-radius: 0 7px 7px 0; }
+.chat .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pinned .pin { color: var(--ruby-text); }
+
+.profile { margin-top: auto; border-top: 1px solid var(--line); padding: 12px 6px 2px; display: flex; align-items: center; gap: 10px; position: relative; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1.5px solid var(--ruby); font-weight: 600; font-size: 13px; }
+.who { flex: 1; min-width: 0; line-height: 1.25; }
+.who b { display: block; font-weight: 600; }
+.who span { color: var(--muted); font-size: 12px; }
+.iconbtn { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; color: var(--muted); }
+.iconbtn:hover { background: var(--raised); color: var(--text); }
+.menu { position: absolute; bottom: 52px; right: 0; width: 248px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; box-shadow: 0 10px 28px rgba(0,0,0,0.45); z-index: 5; }
+.menu h4 { margin: 6px 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); font-weight: 500; }
+.mrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 13px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.ok { background: var(--up); } .wait { background: #d9a441; }
+.mbtn { width: 100%; text-align: left; border: 0; background: none; padding: 7px 8px; border-radius: 6px; color: var(--text); font-size: 13px; }
+.mbtn:hover { background: var(--raised); }
+
+/* ---------- Main ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.topbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); min-height: 52px; }
+.menu-toggle { display: none; }
+.crumb { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.crumb b { color: var(--text); font-weight: 500; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--up); }
+.badge.building i { background: #d9a441; }
+
+.thread { flex: 1; overflow-y: auto; min-height: 0; padding: 28px 20px 12px; }
+.col { max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.intro { text-align: center; padding: 18px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.intro h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); max-width: 56ch; text-wrap: pretty; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; margin-top: 10px; text-align: left; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.fact h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); font-weight: 500; }
+.fact p { margin: 0; color: var(--text); font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
+.chipq { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 7px 12px; font-size: 13px; }
+.chipq:hover { color: var(--text); border-color: var(--ruby); }
+
+.msg-user { align-self: flex-end; max-width: 80%; background: var(--raised); border-radius: 12px; padding: 10px 14px; }
+.msg-ai { display: flex; gap: 12px; align-items: flex-start; }
+.msg-ai .av { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; }
+.msg-ai .body { min-width: 0; flex: 1; }
+.meta { font-size: 12px; color: var(--faint); margin-bottom: 4px; }
+.md { font-size: 14.5px; line-height: 1.6; }
+.md h3 { font-size: 15px; margin: 16px 0 6px; font-weight: 600; }
+.md p { margin: 6px 0; }
+.md ul { margin: 6px 0; padding-left: 20px; }
+.md li { margin: 3px 0; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface); color: var(--muted); font-weight: 500; }
+tr:last-child td { border-bottom: 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.neg { color: var(--down); } .pos { color: var(--up); }
+.sources { font-size: 12px; color: var(--faint); margin-top: 10px; }
+.note { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--muted); font-size: 13px; }
+.note a, .live a { color: var(--ruby-text); }
+.live { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
+
+/* ---------- Agent dots + composer ---------- */
+.dock { padding: 10px 20px 14px; }
+.dock .col { gap: 10px; }
+.agents { display: flex; justify-content: center; gap: 14px; }
+.agent { display: flex; flex-direction: column; align-items: center; gap: 4px; border: 0; background: none; color: var(--faint); font-size: 11px; padding: 2px 4px; }
+.agent .ring { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); opacity: 0.45; transition: opacity 0.15s ease, background 0.15s ease; }
+.agent:hover .ring { opacity: 0.8; }
+.agent.on { color: var(--text); }
+.agent.on .ring { opacity: 1; background: var(--ruby); border-color: var(--ruby); }
+.composer { border: 1px solid rgba(155, 17, 30, 0.7); background: var(--surface); border-radius: 14px; padding: 10px 10px 10px 14px; display: flex; flex-direction: column; gap: 8px; }
+.composer textarea { width: 100%; border: 0; outline: 0; resize: none; background: transparent; color: var(--text); font: 14.5px/1.5 var(--font); min-height: 44px; max-height: 160px; }
+.composer textarea::placeholder { color: var(--faint); }
+.cbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.assets { position: relative; }
+.assetbtn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--muted); }
+.assetbtn:hover { color: var(--text); }
+.assetmenu { position: absolute; bottom: 38px; left: 0; width: 170px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 5px; box-shadow: 0 10px 28px rgba(0,0,0,0.45); z-index: 5; }
+.assetmenu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 9px; border: 0; background: none; border-radius: 6px; font-size: 13px; text-align: left; }
+.assetmenu button:hover, .assetmenu button[aria-checked="true"] { background: var(--raised); }
+.symbol { width: 112px; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 8px; padding: 6px 9px; font: 13px var(--mono); text-transform: uppercase; }
+.symbol::placeholder { color: var(--faint); text-transform: none; }
+.send { margin-left: auto; width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--ruby); color: #fff; display: grid; place-items: center; }
+.send:hover { background: var(--ruby-hi); }
+.disclaimer { text-align: center; font-size: 12px; color: var(--faint); }
+
+/* ---------- Artifacts drawer ---------- */
+.drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 100%); background: var(--panel); border-left: 1px solid var(--line); padding: calc(16px + env(safe-area-inset-top, 0px)) 18px 18px; display: flex; flex-direction: column; gap: 12px; z-index: 20; box-shadow: -12px 0 32px rgba(0,0,0,0.4); }
+.drawer header { display: flex; align-items: center; justify-content: space-between; }
+.drawer h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.art { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 12px; }
+.art b { display: block; margin-bottom: 2px; }
+.art span { color: var(--muted); font-size: 12px; }
+
+.scrim { display: none; }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { position: fixed; inset: 0 auto 0 0; width: min(300px, 86vw); z-index: 15; transform: translateX(-102%); transition: transform 0.2s ease; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  .app.nav-open .side { transform: none; }
+  .app.nav-open .scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 14; }
+  .menu-toggle { display: grid; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .topbar, .thread, .dock { padding-left: 16px; padding-right: 16px; }
+  .badge .long { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- Live app additions ---------- */
+.soon { margin-left: 6px; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: #d9a441; }
+.chatrow { position: relative; display: flex; align-items: center; }
+.chatrow .chat { flex: 1; min-width: 0; }
+.rowmenu { position: absolute; right: 4px; width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 6px; background: var(--raised); color: var(--muted); opacity: 0; }
+.chatrow:hover .rowmenu, .rowmenu:focus-visible { opacity: 1; }
+.rowpop { position: absolute; top: 30px; right: 0; z-index: 6; width: 220px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
+.rename { display: flex; gap: 6px; }
+.rename input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--text); padding: 5px 8px; font: 13px var(--font); }
+.mini { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 7px; padding: 5px 9px; font-size: 12px; }
+.mini:hover { color: var(--text); border-color: var(--faint); }
+.mini.danger { color: var(--down); }
+.bigicon { color: var(--ruby-text); }
+.bigicon svg { width: 40px; height: 40px; }
+.chipq.primary { border-color: var(--ruby); color: var(--text); background: var(--ruby-tint); }
+.thinking { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 4px 0; }
+.dots { display: inline-flex; gap: 4px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--ruby-text); animation: pulse 1.2s infinite ease-in-out; }
+.dots i:nth-child(2) { animation-delay: 0.2s; } .dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.errbox { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid rgba(239, 90, 82, 0.4); background: var(--surface); border-radius: 10px; padding: 10px 12px; color: var(--text); font-size: 13px; }
+.acts { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.quick { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #1b1b21; box-shadow: inset 2px 0 0 var(--ruby); }
+.quick::before { content: "Portfolio control panel"; width: 100%; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+.qbtn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 8px; padding: 7px 12px; font-size: 13px; }
+.qbtn:hover { border-color: var(--ruby); }
+.muted { color: var(--muted); margin: 0; }
+.arthead { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 0; margin-bottom: 8px; }
+.arthead b { display: block; } .arthead span { color: var(--muted); font-size: 12px; }
+#artlist { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; min-height: 0; }
+.md code { font-family: var(--mono); font-size: 13px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.md pre { overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.md a { color: var(--ruby-text); }
+.md strong { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: 0.8; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="Navigation">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M15.2 2 5 14.6h6.6L9.8 24 21 10.6h-6.7L15.2 2Z" fill="#9B111E"/></svg>
+      Aura Invest AI
+    </div>
+    <button class="newchat" id="newchat" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      New Chat
+    </button>
+    <button class="navrow" id="open-artifacts" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>
+      Artifacts
+    </button>
+    <button class="navrow" id="open-settings" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      Settings
+    </button>
+    <div class="label">Workspaces</div>
+    <nav class="groups" id="groups"></nav>
+    <div class="profile">
+      <div class="avatar" aria-hidden="true" id="pinit">R</div>
+      <div class="who"><b id="pname">Roman</b><span id="pplan">Premium Plan</span></div>
+      <button class="iconbtn" id="gear" type="button" aria-label="Account and integrations" aria-expanded="false">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      </button>
+      <div class="menu" id="gearmenu" hidden>
+        <h4>Claude usage</h4>
+        <div class="mrow"><span>Billed through n8n AI credits</span></div>
+        <h4>Agents</h4>
+        <div id="connectors"></div>
+        <h4>Data connectors</h4>
+        <div class="mrow"><span><i class="dot ok"></i>Binance spot &amp; futures</span><span>Keyless</span></div>
+        <div class="mrow"><span><i class="dot ok"></i>Yahoo Finance</span><span>Keyless</span></div>
+        <div class="mrow"><span><i class="dot ok"></i>SEC EDGAR, FRED</span><span>Keyless</span></div>
+        <button class="mbtn" type="button" id="signout">Clear local data</button>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="iconbtn menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="crumb" id="crumb"></div>
+      <span class="badge" id="badge"></span>
+    </header>
+    <section class="thread" id="thread" aria-live="polite"><div class="col" id="col"></div></section>
+    <div class="dock">
+      <div class="col">
+        <div class="agents" id="agents" role="tablist" aria-label="Agents"></div>
+        <form class="composer" id="composer">
+          
+          <textarea id="prompt" rows="2" placeholder="Ask the agent…" aria-label="Message"></textarea>
+          <div class="cbar">
+            <div class="assets">
+              <button class="assetbtn" id="assetbtn" type="button" aria-haspopup="menu" aria-expanded="false">
+                <span id="assetlabel">Assets</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="assetmenu" id="assetmenu" role="menu" hidden></div>
+            </div>
+            <input class="symbol" id="symbol" type="text" placeholder="Symbol" aria-label="Symbol" autocomplete="off">
+            <button class="send" type="submit" aria-label="Send message">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            </button>
+          </div>
+        </form>
+        <div class="disclaimer">Aura shares market analysis for information only. It is not investment advice.</div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="drawer" id="drawer" hidden aria-label="Artifacts">
+    <header>
+      <h2>Artifacts</h2>
+      <button class="iconbtn" id="close-drawer" type="button" aria-label="Close artifacts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </header>
+    <p class="muted">Research you saved from agent replies: deep dives, theses, reviews and tables.</p>
+    <div id="artlist"></div>
+  </aside>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------------------
+  // Configuration: one n8n public chat webhook per agent (null = not live yet).
+  // ---------------------------------------------------------------------------
+  var N8N = 'https://romashsqqq.app.n8n.cloud/webhook/';
+  var CONFIG = {
+    main: N8N + '071f7187-1667-4837-89a1-555d09269f21/chat',
+    trading: N8N + 'c42e8eba-b246-40b8-bc07-8d41856046e0/chat',
+    horizon: null,
+    portfolio: null
+  };
+  var TIMEOUT_MS = 180000;
+
+  var icons = {
+    main: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" fill="currentColor" stroke="none"/></svg>',
+    trading: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7v10M4 9h3v5H4M18 5v12M16.5 8h3v6h-3" stroke="currentColor" stroke-width="1.5"/><path d="M13 3 8 13h3.5l-1 8L16 10h-3.5l.5-7Z" fill="currentColor"/></svg>',
+    horizon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2.5 4.5 5.5v6c0 4.6 3.2 8.3 7.5 10 4.3-1.7 7.5-5.4 7.5-10v-6L12 2.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 15v-2.5M11 15v-4.5M13.5 15V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16.8" cy="15.6" r="2.6" fill="currentColor"/></svg>',
+    portfolio: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v15M7 20h10M5 6.5h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 7 2.5 13a2.5 2.5 0 0 0 5 0L5 7Z" stroke="currentColor" stroke-width="1.3"/><circle cx="5" cy="12.6" r="1.5" fill="currentColor"/><path d="M19 7l-2.5 6a2.5 2.5 0 0 0 5 0L19 7Z" stroke="currentColor" stroke-width="1.3"/><path d="M17.3 13.4h3.4l-.6-1.5h-2.2l-.6 1.5Z" fill="currentColor"/></svg>'
+  };
+  var I = {
+    pin: '<svg class="pin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 17v5M8 3h8l-1 7 3 3v2H6v-2l3-3-1-7Z"/></svg>',
+    chart: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>',
+    chev: '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+    plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    more: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+    save: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></svg>',
+    copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>',
+    retry: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>'
+  };
+
+  var W = {
+    main: { name: 'Main', agent: 'Main agent', desc: 'Your hub: market overview, concepts and where to dig deeper.',
+      does: 'Cross-asset overview of crypto, the S&P 500, Nasdaq, gold, the 10Y yield, VIX and Fear & Greed, plus the news behind the moves.',
+      data: 'Binance, Yahoo Finance, alternative.me, Brave news.', how: 'Clear explanations, and a pointer to the right workspace for deep work.',
+      prompts: ['What moved markets in the last 24 hours?', 'Compare Bitcoin and gold as hedges', 'How do Fed rate decisions affect crypto?'] },
+    trading: { name: 'Trading Space', agent: 'Scanner agent', desc: 'Short-term setups from live candles, order books and positioning.',
+      does: 'Key levels, trend and momentum, order book walls, taker flow, whale prints, funding, open interest, long/short ratio.',
+      data: 'Binance spot and futures, Yahoo Finance for stocks, indices and gold, news.', how: 'Bias with confidence, and scenarios with trigger, target and invalidation.',
+      prompts: ['Key levels for BTCUSDT on the 1h chart', 'Funding and open interest check for ETH', 'Gold: breakout or fake-out this week?'] },
+    horizon: { name: 'Horizon 2030', agent: 'Auditor agent', desc: 'Long-term theses from filings, insiders and megatrends.',
+      does: 'Business moat, multi-year financials, insider activity, 2030 bear / base / bull scenarios with explicit assumptions.',
+      data: 'SEC EDGAR filings, long-term price history, DefiLlama for crypto, web research.', how: 'Conviction level, risks, and what would change the view.',
+      prompts: ['Build a 2030 thesis for NVDA', 'How healthy are Tesla’s financials?', 'Ethereum as a 2030 holding: bull and bear case'] },
+    portfolio: { name: 'Macro & Portfolio', agent: 'Macro Strategist', desc: 'Your crypto and stock portfolio against the macro regime.',
+      does: 'Live valuation of your holdings, health score, macro regime from Fed, inflation and jobs data, rebalancing ideas.',
+      data: 'Your holdings, Binance and Yahoo prices, FRED macro data, Fear & Greed, FX rates.', how: 'Allocation vs targets for your risk profile, with staged moves in percentage points.',
+      prompts: ['Show my live portfolio', 'Review my portfolio against today’s macro regime', 'Am I too concentrated anywhere?'] }
+  };
+  var GROUPS = ['main', 'trading', 'horizon', 'portfolio'];
+  var AGENT_DOTS = ['trading', 'horizon', 'portfolio'];
+
+  var SEED = {
+    main: [['What moved markets today', 'What moved markets in the last 24 hours? Give me the snapshot and the drivers.'],
+           ['Crypto vs stocks basics', 'Explain the main differences in risk between crypto and stocks for a long-term investor.']],
+    trading: [['BTC Scalping Signals', 'Give me 5m and 15m scalping levels for BTCUSDT with order flow and funding.'],
+              ['NASDAQ Order Book Analysis', 'Short-term setup for the Nasdaq 100 (QQQ / ^NDX): key levels, momentum and volume.'],
+              ['Gold Volatility Play', 'Gold (GC=F): is this week a breakout or a fake-out? Levels, volatility and catalysts.'],
+              ['Leverage Risk Check', 'Check positioning risk on BTCUSDT and ETHUSDT perpetuals: funding, open interest and long/short ratio.']],
+    horizon: [['TSLA 2030 Thesis', 'Build a 2030 thesis for TSLA with bear, base and bull scenarios.'],
+              ['AI Sector Growth', 'Which AI infrastructure companies look best positioned for 2030, and why?'],
+              ['ETF Dividend Portfolio', 'How would you evaluate a dividend ETF as a core long-term holding?'],
+              ['Nvidia Q3 Analysis', 'How healthy are NVIDIA’s latest financials, and what do they imply for 2030?']],
+    portfolio: [['FED Rate Hike Impact', 'What is the current Fed policy stance and how would rate changes affect a crypto and tech-heavy portfolio?'],
+                ['Global Inflation Update', 'Give me the latest US inflation picture: CPI, core CPI, core PCE and the trend.'],
+                ['Portfolio Rebalancing', 'Suggest a rebalancing plan for my portfolio for a balanced risk profile.'],
+                ['Risk Exposure Report', 'Where are the biggest risks in my portfolio right now?']]
+  };
+
+  // ---------------------------------------------------------------------------
+  // State (persisted in localStorage)
+  // ---------------------------------------------------------------------------
+  var KEY = 'aura-app-v1';
+  function uid() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+  function seedState() {
+    var st = { chats: [], current: null, closed: {}, artifacts: [], profile: { name: 'Roman', plan: 'Premium Plan' } };
+    st.chats.push({ id: 'portfolio-pinned', ws: 'portfolio', title: 'Portfolio chat', pinned: true, sessionId: uid(), starter: 'Show my live portfolio with current values, P&L and health score.', messages: [], updated: 0 });
+    GROUPS.forEach(function (ws) {
+      SEED[ws].forEach(function (s) { st.chats.push({ id: uid(), ws: ws, title: s[0], starter: s[1], sessionId: uid(), messages: [], updated: 0 }); });
+    });
+    st.current = st.chats[1].id;
+    return st;
+  }
+  var S;
+  try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { S = null; }
+  if (!S || !S.chats) S = seedState();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, html) { var n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; }
+  function txt(tag, cls, t) { var n = document.createElement(tag); if (cls) n.className = cls; n.textContent = t; return n; }
+  function chatById(id) { for (var i = 0; i < S.chats.length; i++) if (S.chats[i].id === id) return S.chats[i]; return null; }
+  function current() { return chatById(S.current) || S.chats[0]; }
+  function fmtTime(ts) { try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+
+  // Minimal, safe Markdown renderer: escapes all HTML first, then applies a small markdown subset
+  // (headings, bold/italic, inline code, links, lists, tables, code blocks, rules).
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function inline(s) {
+    var codes = [];
+    s = s.replace(/`([^`]+)`/g, function (_, c) { codes.push('<code>' + c + '</code>'); return '\u0000' + (codes.length - 1) + '\u0000'; });
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+    s = s.replace(/\u0000(\d+)\u0000/g, function (_, i) { return codes[+i]; });
+    return s;
+  }
+  function mdToHtml(md) {
+    var lines = esc(String(md).replace(/\r\n?/g, '\n')).split('\n');
+    var out = [], i = 0;
+    function isRow(l) { return /^\s*\|.*\|\s*$/.test(l); }
+    function cells(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (c) { return c.trim(); }); }
+    while (i < lines.length) {
+      var l = lines[i];
+      if (/^\s*```/.test(l)) { var buf = []; i++; while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++]); i++; out.push('<pre><code>' + buf.join('\n') + '</code></pre>'); continue; }
+      if (isRow(l) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
+        var head = cells(l); i += 2; var rows = [];
+        while (i < lines.length && isRow(lines[i])) rows.push(cells(lines[i++]));
+        out.push('<table><thead><tr>' + head.map(function (c) { return '<th>' + inline(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + inline(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table>');
+        continue;
+      }
+      var h = /^(#{1,6})\s+(.*)$/.exec(l);
+      if (h) { var lv = Math.min(h[1].length + 1, 4); out.push('<h' + lv + '>' + inline(h[2]) + '</h' + lv + '>'); i++; continue; }
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+      if (/^\s*[-*+]\s+/.test(l)) { var items = []; while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) items.push('<li>' + inline(lines[i++].replace(/^\s*[-*+]\s+/, '')) + '</li>'); out.push('<ul>' + items.join('') + '</ul>'); continue; }
+      if (/^\s*\d+[.)]\s+/.test(l)) { var oi = []; while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) oi.push('<li>' + inline(lines[i++].replace(/^\s*\d+[.)]\s+/, '')) + '</li>'); out.push('<ol>' + oi.join('') + '</ol>'); continue; }
+      if (!l.trim()) { i++; continue; }
+      var para = []; while (i < lines.length && lines[i].trim() && !isRow(lines[i]) && !/^(#{1,6}\s|\s*[-*+]\s|\s*\d+[.)]\s|\s*```)/.test(lines[i])) para.push(inline(lines[i++]));
+      if (para.length) out.push('<p>' + para.join('<br>') + '</p>'); else { out.push('<p>' + inline(l) + '</p>'); i++; }
+    }
+    return out.join('\n');
+  }
+
+  function renderMarkdown(md) {
+    var box = el('div', 'md', mdToHtml(md));
+    box.querySelectorAll('table').forEach(function (tb) { var wrap = el('div', 'tbl'); tb.parentNode.insertBefore(wrap, tb); wrap.appendChild(tb); });
+    return box;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sidebar
+  // ---------------------------------------------------------------------------
+  var menuOpenFor = null;
+  function renderGroups() {
+    var nav = $('groups'); nav.innerHTML = '';
+    var cur = current();
+    GROUPS.forEach(function (ws) {
+      var w = W[ws];
+      var g = el('div', 'group' + (S.closed[ws] ? ' closed' : '') + (cur.ws === ws ? ' active' : ''));
+      var head = el('div', 'ghead');
+      var tog = el('button', 'gtoggle', I.chev); tog.type = 'button';
+      tog.setAttribute('aria-expanded', S.closed[ws] ? 'false' : 'true');
+      tog.appendChild(txt('span', 'gname', w.name));
+      if (!CONFIG[ws]) tog.appendChild(txt('span', 'soon', 'setting up'));
+      tog.onclick = function () { S.closed[ws] = !S.closed[ws]; save(); renderGroups(); };
+      var plus = el('button', 'gplus', I.plus); plus.type = 'button'; plus.setAttribute('aria-label', 'New chat in ' + w.name);
+      plus.onclick = function () { newChat(ws); };
+      head.appendChild(tog); head.appendChild(plus); g.appendChild(head);
+      var ul = el('ul', 'chats');
+      var list = S.chats.filter(function (c) { return c.ws === ws; });
+      list.sort(function (a, b) { if (a.pinned) return -1; if (b.pinned) return 1; return (b.updated || 0) - (a.updated || 0); });
+      list.forEach(function (c) {
+        var li = el('li', 'chatrow');
+        var b = el('button', 'chat' + (c.pinned ? ' pinned' : '') + (c.id === cur.id ? ' current' : ''));
+        b.type = 'button';
+        if (c.pinned) b.innerHTML = I.pin;
+        b.appendChild(txt('span', 'grow', c.title));
+        if (c.pinned) b.insertAdjacentHTML('beforeend', I.chart);
+        b.onclick = function () { openChat(c.id); };
+        li.appendChild(b);
+        if (!c.pinned) {
+          var m = el('button', 'rowmenu', I.more); m.type = 'button'; m.setAttribute('aria-label', 'Chat options for ' + c.title);
+          m.onclick = function (e) { e.stopPropagation(); menuOpenFor = menuOpenFor === c.id ? null : c.id; renderGroups(); };
+          li.appendChild(m);
+          if (menuOpenFor === c.id) li.appendChild(rowMenu(c));
+        }
+        ul.appendChild(li);
+      });
+      g.appendChild(ul); nav.appendChild(g);
+    });
+  }
+  function rowMenu(c) {
+    var box = el('div', 'rowpop');
+    var renaming = el('div', 'rename');
+    var inp = document.createElement('input'); inp.type = 'text'; inp.value = c.title; inp.id = 'rename-' + c.id; inp.setAttribute('aria-label', 'Chat title'); inp.maxLength = 80;
+    var ok = txt('button', 'mini', 'Rename'); ok.type = 'button';
+    ok.onclick = function () { var v = inp.value.trim(); if (v) { c.title = v; save(); } menuOpenFor = null; renderAll(); };
+    inp.onkeydown = function (e) { if (e.key === 'Enter') ok.click(); };
+    renaming.appendChild(inp); renaming.appendChild(ok); box.appendChild(renaming);
+    var del = txt('button', 'mini danger', 'Delete chat'); del.type = 'button';
+    del.onclick = function () {
+      if (del.dataset.confirm) {
+        S.chats = S.chats.filter(function (x) { return x.id !== c.id; });
+        if (S.current === c.id) S.current = S.chats[0].id;
+        menuOpenFor = null; save(); renderAll();
+      } else { del.dataset.confirm = '1'; del.textContent = 'Click again to delete'; }
+    };
+    box.appendChild(del);
+    return box;
+  }
+
+  function newChat(ws) {
+    var c = { id: uid(), ws: ws, title: 'New chat', sessionId: uid(), messages: [], updated: Date.now() };
+    S.chats.push(c); S.current = c.id; S.closed[ws] = false; save(); renderAll(); $('prompt').focus();
+  }
+  function openChat(id) { S.current = id; menuOpenFor = null; save(); renderAll(); $('app').classList.remove('nav-open'); }
+
+  // ---------------------------------------------------------------------------
+  // Agent dots, header, thread
+  // ---------------------------------------------------------------------------
+  function renderAgents() {
+    var box = $('agents'); box.innerHTML = ''; var ws = current().ws;
+    AGENT_DOTS.forEach(function (k) {
+      var b = el('button', 'agent' + (ws === k ? ' on' : '')); b.type = 'button';
+      b.setAttribute('aria-pressed', ws === k ? 'true' : 'false');
+      b.title = W[k].agent + ' · ' + W[k].name;
+      b.innerHTML = '<span class="ring">' + icons[k] + '</span>';
+      b.appendChild(txt('span', '', W[k].agent));
+      b.onclick = function () { newChat(k); };
+      box.appendChild(b);
+    });
+  }
+
+  function renderHeader() {
+    var c = current(), w = W[c.ws];
+    var crumb = $('crumb'); crumb.innerHTML = ''; crumb.appendChild(document.createTextNode(w.name + ' / ')); crumb.appendChild(txt('b', '', c.title));
+    var badge = $('badge'); var live = !!CONFIG[c.ws];
+    badge.className = 'badge' + (live ? '' : ' building'); badge.innerHTML = '<i></i>';
+    badge.appendChild(document.createTextNode(w.agent + ' '));
+    badge.appendChild(txt('span', 'long', live ? '· live' : '· setting up'));
+    $('prompt').placeholder = 'Ask the ' + w.agent + '…';
+  }
+
+  function intro(c) {
+    var w = W[c.ws]; var box = el('div', 'intro');
+    var ic = el('div', 'bigicon', icons[c.ws]); box.appendChild(ic);
+    box.appendChild(txt('h1', '', c.title === 'New chat' ? w.name + ' · ' + w.agent : c.title));
+    box.appendChild(txt('p', '', w.desc));
+    var facts = el('div', 'facts');
+    [['What it does', w.does], ['Data it reads', w.data], ['What you get', w.how]].forEach(function (f) {
+      var card = el('div', 'fact'); card.appendChild(txt('h3', '', f[0])); card.appendChild(txt('p', '', f[1])); facts.appendChild(card);
+    });
+    box.appendChild(facts);
+    var chips = el('div', 'chips');
+    if (c.starter) { var st = txt('button', 'chipq primary', 'Start: ' + c.starter); st.type = 'button'; st.onclick = function () { send(c.starter); }; chips.appendChild(st); }
+    w.prompts.forEach(function (p) { var b = txt('button', 'chipq', p); b.type = 'button'; b.onclick = function () { send(p); }; chips.appendChild(b); });
+    box.appendChild(chips);
+    if (!CONFIG[c.ws]) box.appendChild(txt('div', 'note', 'The ' + w.agent + ' is being connected right now. Messages you send here will be answered as soon as it goes live.'));
+    return box;
+  }
+
+  function portfolioActions() {
+    var bar = el('div', 'quick');
+    [['Show my live portfolio', 'Show my live portfolio with current values, P&L, allocation and health score.'],
+     ['Run portfolio review', 'Run a full portfolio review against today’s macro regime, with rebalancing ideas.'],
+     ['Add holdings', null]].forEach(function (a) {
+      var b = txt('button', 'qbtn', a[0]); b.type = 'button';
+      b.onclick = function () { if (a[1]) send(a[1]); else { $('prompt').value = 'Add 0.35 BTC at 52000, 4.2 ETH at 2300 and 40 NVDA at 92'; $('prompt').focus(); } };
+      bar.appendChild(b);
+    });
+    return bar;
+  }
+
+  function renderThread() {
+    var c = current(), w = W[c.ws]; var col = $('col'); col.innerHTML = '';
+    if (c.pinned) col.appendChild(portfolioActions());
+    if (!c.messages.length) col.appendChild(intro(c));
+    c.messages.forEach(function (m, idx) {
+      if (m.role === 'user') { col.appendChild(txt('div', 'msg-user', m.text)); return; }
+      var row = el('div', 'msg-ai');
+      var av = el('div', 'av', icons[c.ws]); row.appendChild(av);
+      var body = el('div', 'body');
+      body.appendChild(txt('div', 'meta', w.agent + ' · ' + fmtTime(m.ts)));
+      if (m.pending) {
+        var th = el('div', 'thinking'); th.appendChild(txt('span', '', m.slow ? 'Still working, pulling more data' : w.agent + ' is analyzing live data'));
+        th.insertAdjacentHTML('beforeend', '<span class="dots"><i></i><i></i><i></i></span>');
+        body.appendChild(th);
+      } else if (m.error) {
+        var er = el('div', 'errbox'); er.appendChild(txt('span', '', m.text));
+        var rb = el('button', 'mini', I.retry + ' Retry'); rb.type = 'button'; rb.onclick = function () { retry(c, idx); };
+        er.appendChild(rb); body.appendChild(er);
+      } else {
+        body.appendChild(renderMarkdown(m.text));
+        var acts = el('div', 'acts');
+        var sv = el('button', 'mini', I.save + ' Save to Artifacts'); sv.type = 'button';
+        sv.onclick = function () { S.artifacts.unshift({ id: uid(), title: c.title + ' · ' + w.agent, ws: c.ws, text: m.text, ts: Date.now() }); save(); sv.textContent = 'Saved'; renderArtifacts(); };
+        var cp = el('button', 'mini', I.copy + ' Copy'); cp.type = 'button';
+        cp.onclick = function () { try { navigator.clipboard.writeText(m.text).then(function () { cp.textContent = 'Copied'; }, function () {}); } catch (e) {} };
+        acts.appendChild(sv); acts.appendChild(cp); body.appendChild(acts);
+      }
+      row.appendChild(body); col.appendChild(row);
+    });
+    var th = $('thread'); th.scrollTop = th.scrollHeight;
+  }
+
+  function renderArtifacts() {
+    var list = $('artlist'); list.innerHTML = '';
+    if (!S.artifacts.length) { list.appendChild(txt('p', 'muted', 'Nothing saved yet. Use "Save to Artifacts" under any agent reply to keep research here.')); return; }
+    S.artifacts.forEach(function (a) {
+      var card = el('div', 'art');
+      var head = el('button', 'arthead'); head.type = 'button';
+      head.appendChild(txt('b', '', a.title)); head.appendChild(txt('span', '', W[a.ws].name + ' · ' + new Date(a.ts).toLocaleString()));
+      var content = renderMarkdown(a.text); content.hidden = true;
+      head.onclick = function () { content.hidden = !content.hidden; };
+      var del = txt('button', 'mini danger', 'Remove'); del.type = 'button';
+      del.onclick = function () { S.artifacts = S.artifacts.filter(function (x) { return x.id !== a.id; }); save(); renderArtifacts(); };
+      card.appendChild(head); card.appendChild(content); card.appendChild(del); list.appendChild(card);
+    });
+  }
+
+  function renderConnectors() {
+    var box = $('connectors'); box.innerHTML = '';
+    GROUPS.forEach(function (ws) {
+      var r = el('div', 'mrow'); var live = !!CONFIG[ws];
+      var l = el('span', '', '<i class="dot ' + (live ? 'ok' : 'wait') + '"></i>'); l.appendChild(document.createTextNode(W[ws].agent));
+      r.appendChild(l); r.appendChild(txt('span', '', live ? 'Live' : 'Setting up')); box.appendChild(r);
+    });
+  }
+
+  function renderAll() { renderGroups(); renderAgents(); renderHeader(); renderThread(); }
+
+  // ---------------------------------------------------------------------------
+  // Talking to the n8n agents
+  // ---------------------------------------------------------------------------
+  var asset = null;
+  function contextPrefix() {
+    var sym = $('symbol').value.trim().toUpperCase();
+    if (!asset && !sym) return '';
+    return '[Context: ' + [asset ? 'asset class = ' + asset : null, sym ? 'symbol = ' + sym : null].filter(Boolean).join(', ') + ']\n';
+  }
+
+  function parseReply(raw) {
+    var data; try { data = JSON.parse(raw); } catch (e) { return raw; }
+    if (Array.isArray(data)) data = data[0] || {};
+    if (typeof data === 'string') return data;
+    return data.output || data.text || data.message || data.response || JSON.stringify(data);
+  }
+
+  function ask(c, aiMsg, chatInput) {
+    var url = CONFIG[c.ws];
+    if (!url) { aiMsg.pending = false; aiMsg.error = true; aiMsg.text = 'The ' + W[c.ws].agent + ' is not live yet. Try again in a little while.'; save(); if (current().id === c.id) renderThread(); return; }
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var slowTimer = setTimeout(function () { aiMsg.slow = true; if (current().id === c.id) renderThread(); }, 45000);
+    var killTimer = setTimeout(function () { if (ctrl) ctrl.abort(); }, TIMEOUT_MS);
+    fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'sendMessage', sessionId: c.sessionId, chatInput: chatInput }), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (res) { return res.text().then(function (t) { if (!res.ok) throw new Error('HTTP ' + res.status); return t; }); })
+      .then(function (t) { var out = parseReply(t); aiMsg.text = (out && String(out).trim()) ? String(out) : 'The agent returned an empty answer. Please retry.'; aiMsg.error = !(out && String(out).trim()); })
+      .catch(function (e) { aiMsg.error = true; aiMsg.text = e && e.name === 'AbortError' ? 'This took too long and was stopped. Please retry, or ask a narrower question.' : 'Couldn’t reach the ' + W[c.ws].agent + ' (' + (e && e.message ? e.message : 'network error') + '). Check your connection and retry.'; })
+      .then(function () { clearTimeout(slowTimer); clearTimeout(killTimer); aiMsg.pending = false; aiMsg.slow = false; aiMsg.ts = Date.now(); c.updated = Date.now(); save(); if (current().id === c.id) renderThread(); renderGroups(); });
+  }
+
+  function send(textIn) {
+    var c = current(); var t = (textIn != null ? textIn : $('prompt').value).trim(); if (!t) return;
+    if (c.messages.some(function (m) { return m.pending; })) return;
+    var input = contextPrefix() + t;
+    c.messages.push({ role: 'user', text: t, input: input, ts: Date.now() });
+    if (c.title === 'New chat') c.title = t.length > 42 ? t.slice(0, 40) + '…' : t;
+    var ai = { role: 'assistant', pending: true, ts: Date.now() }; c.messages.push(ai);
+    c.updated = Date.now(); if (textIn == null) $('prompt').value = '';
+    save(); renderAll(); ask(c, ai, input);
+  }
+
+  function retry(c, idx) {
+    var ai = c.messages[idx]; var user = c.messages[idx - 1]; if (!user) return;
+    ai.pending = true; ai.error = false; ai.text = ''; save(); renderThread(); ask(c, ai, user.input || user.text);
+  }
+
+  // Messages left pending by a reload can't resume: mark them for retry.
+  S.chats.forEach(function (c) { c.messages.forEach(function (m) { if (m.pending) { m.pending = false; m.error = true; m.text = 'The page was reloaded before the reply arrived. Please retry.'; } }); });
+
+  // ---------------------------------------------------------------------------
+  // Controls
+  // ---------------------------------------------------------------------------
+  var ASSETS = [
+    ['Crypto', 'BTCUSDT', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 7.5v9M9.5 8h4a2 2 0 0 1 0 4h-4m0 0h4.5a2 2 0 0 1 0 4H9.5M11 6v2M11 16v2"/></svg>'],
+    ['Stocks', 'NVDA', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m3 17 6-6 4 4 8-8M15 7h6v6"/></svg>'],
+    ['Indices', '^GSPC', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'],
+    ['Gold', 'GC=F', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h8l-1.5-5h-5L3 18ZM13 18h8l-1.5-5h-5L13 18ZM8 11h8l-1.5-5h-5L8 11Z"/></svg>']
+  ];
+  function renderAssets() {
+    var m = $('assetmenu'); m.innerHTML = '';
+    ASSETS.forEach(function (a) {
+      var b = el('button', '', a[2]); b.type = 'button'; b.setAttribute('role', 'menuitemradio'); b.setAttribute('aria-checked', asset === a[0] ? 'true' : 'false');
+      b.appendChild(document.createTextNode(a[0]));
+      b.onclick = function () { asset = asset === a[0] ? null : a[0]; $('assetlabel').textContent = asset || 'Assets'; $('symbol').placeholder = asset ? a[1] : 'Symbol'; m.hidden = true; $('assetbtn').setAttribute('aria-expanded', 'false'); renderAssets(); };
+      m.appendChild(b);
+    });
+  }
+
+  $('assetbtn').onclick = function (e) { e.stopPropagation(); var m = $('assetmenu'); m.hidden = !m.hidden; this.setAttribute('aria-expanded', String(!m.hidden)); };
+  $('gear').onclick = function (e) { e.stopPropagation(); var m = $('gearmenu'); m.hidden = !m.hidden; this.setAttribute('aria-expanded', String(!m.hidden)); };
+  $('newchat').onclick = function () { newChat('main'); };
+  $('open-artifacts').onclick = function () { renderArtifacts(); $('drawer').hidden = false; $('app').classList.remove('nav-open'); };
+  $('close-drawer').onclick = function () { $('drawer').hidden = true; };
+  $('open-settings').onclick = function (e) { e.stopPropagation(); $('gearmenu').hidden = false; $('gear').setAttribute('aria-expanded', 'true'); };
+  $('menu-toggle').onclick = function () { $('app').classList.add('nav-open'); };
+  $('scrim').onclick = function () { $('app').classList.remove('nav-open'); };
+  $('signout').onclick = function () {
+    var b = $('signout');
+    if (b.dataset.confirm) { try { localStorage.removeItem(KEY); } catch (e) {} S = seedState(); save(); b.dataset.confirm = ''; b.textContent = 'Clear local data'; $('gearmenu').hidden = true; renderAll(); }
+    else { b.dataset.confirm = '1'; b.textContent = 'Click again to clear all chats'; }
+  };
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.assets')) $('assetmenu').hidden = true;
+    if (!e.target.closest('.profile') && !e.target.closest('#open-settings')) $('gearmenu').hidden = true;
+    if (menuOpenFor && !e.target.closest('.chatrow')) { menuOpenFor = null; renderGroups(); }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('drawer').hidden = true; $('gearmenu').hidden = true; $('assetmenu').hidden = true; $('app').classList.remove('nav-open'); } });
+  $('prompt').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+  $('prompt').addEventListener('input', function () { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 160) + 'px'; });
+  $('composer').addEventListener('submit', function (e) { e.preventDefault(); send(); });
+
+  $('pname').textContent = S.profile.name; $('pplan').textContent = S.profile.plan; $('pinit').textContent = S.profile.name.charAt(0).toUpperCase();
+  renderAssets(); renderConnectors(); renderAll(); save();
+})();
+</script>
+</body>
+</html>

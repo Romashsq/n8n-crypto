@@ -29,7 +29,7 @@ Now: {{ $now.toUTC().toFormat("cccc yyyy-MM-dd HH:mm") }} UTC. Use it for every 
 
 # Tools
 - crypto_prices: Binance 24h tickers for several crypto pairs at once (lastPrice, priceChangePercent over 24h, quoteVolume in USDT). Default set: ["BTCUSDT","ETHUSDT","SOLUSDT"]. Use PAXGUSDT as a 24/7 gold proxy if needed.
-- market_quote: Yahoo Finance daily chart (5 days) for one ticker per call: SPY (S&P 500 proxy), QQQ (Nasdaq 100 proxy), ^GSPC (S&P 500 index), ^NDX (Nasdaq 100 index), GC=F (gold futures), ^TNX (US 10-year Treasury yield x10: 41.2 means 4.12%), ^VIX (volatility index), DX-Y.NYB (US dollar index DXY), or any US stock/ETF ticker. meta.regularMarketPrice is the latest price, meta.regularMarketTime its Unix time (seconds), and indicators.quote[0].close the daily closes aligned with timestamp. Compute the 1-day change from the last two daily closes (or regularMarketPrice vs the previous daily close) with the calculator.
+- market_quote: Yahoo Finance daily chart (5 days) for one ticker per call: SPY (S&P 500 proxy), QQQ (Nasdaq 100 proxy), ^GSPC (S&P 500 index), ^NDX (Nasdaq 100 index), GC=F (gold futures), ^TNX (US 10-year Treasury yield in percent; some feeds quote it x10, so a value above 20 such as 41.2 means 4.12%), ^VIX (volatility index), DX-Y.NYB (US dollar index DXY), or any US stock/ETF ticker. In result[0].meta: regularMarketPrice is the latest price, regularMarketChangePercent the change vs the previous close, regularMarketTime its Unix time (seconds), plus fiftyTwoWeekHigh and fiftyTwoWeekLow. indicators.quote[0].close holds the daily closes aligned with timestamp.
 - crypto_fear_greed: crypto Fear & Greed index for the last 7 days (0-100 with classification).
 - news_search: recent web results with title, source, age and URL. Use specific queries, for example "stock market today" or "Bitcoin price news", and set freshness pd (past 24 hours) for "what moved" questions, pw (past week) otherwise.
 - calculator: arithmetic for returns, changes, compounding and conversions.
@@ -158,7 +158,7 @@ const marketQuote = tool({
     name: 'market_quote',
     parameters: {
       toolDescription:
-        'Yahoo Finance daily chart (last 5 days) for one ticker: SPY, QQQ, ^GSPC, ^NDX, GC=F (gold), ^TNX (10Y yield x10), ^VIX, DX-Y.NYB (dollar index) or any US stock/ETF. Returns meta (regularMarketPrice, regularMarketTime) and daily closes.',
+        'Yahoo Finance daily chart (last 5 days) for one ticker: SPY, QQQ, ^GSPC, ^NDX, GC=F (gold), ^TNX (US 10Y yield), ^VIX, DX-Y.NYB (dollar index) or any US stock/ETF. Returns meta (regularMarketPrice, regularMarketChangePercent, regularMarketTime, 52-week range) and daily closes.',
       method: 'GET',
       url: `={{ 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent($fromAI('ticker', 'Yahoo ticker, e.g. SPY, QQQ, ^GSPC, ^NDX, GC=F, ^TNX, ^VIX, DX-Y.NYB', 'string')) }}`,
       sendQuery: true,
@@ -172,10 +172,10 @@ const marketQuote = tool({
       headerParameters: { parameters: [{ name: 'User-Agent', value: 'Mozilla/5.0 (compatible; AuraInvestAI/1.0)' }] },
       optimizeResponse: true,
       responseType: 'json',
-      dataField: 'chart.result',
+      // dataField takes a top-level key only ('chart.result' fails with "Target field not found").
+      dataField: 'chart',
       fieldsToInclude: 'selected',
-      fields:
-        'meta.symbol,meta.regularMarketPrice,meta.previousClose,meta.chartPreviousClose,meta.currency,meta.regularMarketTime,meta.exchangeTimezoneName,timestamp,indicators.quote',
+      fields: 'result',
       options: { timeout: 15000 },
     },
   },
